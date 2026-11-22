@@ -1,5 +1,7 @@
 # Wywołuje /api/cron co 5 minut, żeby kursy zbierały się także wtedy, gdy nikt nie ogląda dashboardu.
-# (Vercel Cron na planie Hobby działa maks. raz dziennie, stąd GitHub Actions.)
+# (Vercel Cron na planie Hobby działa maks. raz dziennie.)
+# Harmonogram GitHuba jest „best effort” (opóźnienia, pominięte uruchomienia) — główny harmonogram
+# najlepiej ustawić na cron-job.org (zob. README); to jest zapas. /api/cron sam pomija zbyt częste wywołania.
 #
 # Wymagane sekrety repozytorium (Settings → Secrets and variables → Actions):
 #   APP_URL      — adres aplikacji na Vercelu, np. https://tofilabs-kantor.vercel.app

@@ -64,14 +64,16 @@ konto w bazie — `lib/session.ts`). Bez zmiennych `AUTH_*` nikt się nie zalogu
 ### Scraping co 5 minut
 
 Dashboard sam pobiera kursy, gdy ktoś go ogląda, a dane mają > 5 min. Żeby historia zbierała się
-też bez oglądających, `/api/cron` musi być wołany co 5 minut:
+też bez oglądających, `/api/cron` musi być wołany co 5 minut (nagłówek
+`Authorization: Bearer $CRON_SECRET`). Endpoint pomija scraping, jeśli ostatni był < 4 min temu,
+więc kilka harmonogramów naraz nie dubluje zapytań do kantorów (`?force=1` wymusza).
 
-- **Plan Hobby (darmowy)** — Vercel Cron działa tam maks. raz dziennie, więc używamy GitHub Actions
-  (`.github/workflows/scrape.yml`). W repo dodaj sekrety *Settings → Secrets and variables → Actions*:
-  `APP_URL` (np. `https://tofilabs-kantor.vercel.app`) i `CRON_SECRET` (ta sama wartość co na Vercelu).
-  GitHub potrafi opóźniać takie zadania o kilka minut.
-- **Plan Pro** — można zamiast tego dodać do `vercel.json`:
-  `"crons": [{ "path": "/api/cron", "schedule": "*/5 * * * *" }]` (Vercel sam wyśle `CRON_SECRET`).
+- **cron-job.org (zalecane, darmowe, punktualne)** — nowy cronjob: URL `https://<app>/api/cron`,
+  co 5 minut, w *Advanced → Headers* dodaj `Authorization: Bearer <CRON_SECRET>`.
+- **GitHub Actions** (`.github/workflows/scrape.yml`, zapas) — sekrety repo `APP_URL` i `CRON_SECRET`.
+  Harmonogram GitHuba jest „best effort”: w praktyce odpala co 10–30 min, a część uruchomień przepada.
+- **Vercel Cron** — na planie Hobby tylko raz dziennie; na Pro można dodać do `vercel.json`:
+  `"crons": [{ "path": "/api/cron", "schedule": "*/5 * * * *" }]`.
 
 Sprawdzenie ręczne: `curl -H "Authorization: Bearer $CRON_SECRET" https://<app>/api/cron`.
 
