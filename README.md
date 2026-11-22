@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kursy walut — dashboard
 
-## Getting Started
+Next.js (App Router) + PostgreSQL. Scrapuje kursy z kantorów co 5 minut (lub na żądanie)
+i pokazuje je w jednej tabeli: wiersze = waluty, kolumny = kantory. Po najechaniu na walutę
+widać wykres z 24 h, a po kliknięciu podstronę `/waluta/[SYMBOL]` (24 h / 7 dni / 30 dni).
 
-First, run the development server:
+## Uruchomienie lokalnie
+
+Wymaga lokalnego PostgreSQL (np. `brew install postgresql@18 && brew services start postgresql@18`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+createdb tofilabs_kantor
+cp .env.example .env.local     # DATABASE_URL=postgres://localhost:5432/tofilabs_kantor
+npm install
+npm run db:migrate             # tworzy tabele (db/schema.sql, idempotentne)
+npm run dev                    # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Baza danych
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Tabela | Co trzyma |
+|---|---|
+| `sources` | kantory (id, nazwa, URL) — synchronizowane z `lib/sources.ts` przy scrapingu |
+| `rate_history` | historia kursów; **nowy wiersz tylko przy zmianie** kupna lub sprzedaży |
+| `scrape_runs` | log każdego scrapingu (czas, sukces/błąd, ile kursów, ile zmian) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Bieżący kurs = najnowszy wiersz w `rate_history` dla (kantor, waluta). Zmiana jest liczona
+względem poprzedniej **różnej** wartości.
 
-## Learn More
+## Neon (produkcja / Vercel)
 
-To learn more about Next.js, take a look at the following resources:
+1. Załóż projekt na [neon.tech](https://neon.tech), skopiuj **pooled** connection string
+   (host z `-pooler`, z `?sslmode=require`).
+2. Odpal schemat na Neonie: `DATABASE_URL="postgres://…neon.tech/neondb?sslmode=require" npm run db:migrate`
+3. Na Vercelu ustaw zmienną środowiskową `DATABASE_URL` na ten sam string.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Kod nie wymaga zmian — sterownik `pg` łączy się tak samo z lokalnym Postgresem i z Neonem.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Dodanie kolejnego kantoru
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Parser w `lib/scrapers/<kantor>.ts` zwracający `ScrapedRate[]`.
+2. Wpis w `lib/sources.ts`.
+3. Brakującą flagę dopisz w `lib/currencies.ts`.
