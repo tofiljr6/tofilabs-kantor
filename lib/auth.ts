@@ -1,8 +1,14 @@
-// Sesja = podpisany token w ciasteczku httpOnly. Działa w middleware (Edge) i w Node — tylko Web Crypto.
-// Klucz HMAC = AUTH_SECRET + AUTH_PASSWORD, więc zmiana hasła unieważnia wszystkie stare sesje.
+// Sesja = podpisany token w ciasteczku httpOnly. Tylko Web Crypto — działa w middleware (Edge) i w Node.
+//
+// Payload: { u: login, k: "a" (admin z env) | "u" (użytkownik z bazy), v: odcisk hasła, exp }
+// - odcisk hasła (v) unieważnia sesję po zmianie hasła;
+// - middleware sprawdza tylko podpis i ważność (bez bazy); pełne sprawdzenie użytkownika z bazy
+//   (czy nadal istnieje, czy hasło to samo) robi lib/session.ts na każdej stronie i w API.
 
 export const SESSION_COOKIE = "kantor_session";
 export const SESSION_TTL_S = 30 * 24 * 3600; // 30 dni
+
+export type SessionPayload = { u: string; k: "a" | "u"; v: string; exp: number };
 
 const enc = new TextEncoder();
 
@@ -45,32 +51,44 @@ export async function safeEqual(a: string, b: string): Promise<boolean> {
   return diff === 0;
 }
 
-export async function checkCredentials(username: string, password: string): Promise<boolean> {
+/** Odcisk sekretu hasła (hasło admina z env albo hash hasła z bazy) — wchodzi do tokenu. */
+export async function passwordFingerprint(material: string): Promise<string> {
+  const cfg = authConfig();
+  if (!cfg) throw new Error("Brak konfiguracji AUTH_*");
+  return b64url(await hmac(cfg.secret, "pw:" + material)).slice(0, 22);
+}
+
+export async function isAdminCredentials(username: string, password: string): Promise<boolean> {
   const cfg = authConfig();
   if (!cfg) return false;
   const [u, p] = await Promise.all([safeEqual(username, cfg.username), safeEqual(password, cfg.password)]);
   return u && p;
 }
 
-export async function createSessionToken(username: string): Promise<string> {
+export async function createSessionToken(p: Omit<SessionPayload, "exp">): Promise<string> {
   const cfg = authConfig();
   if (!cfg) throw new Error("Brak konfiguracji AUTH_*");
-  const payload = b64url(enc.encode(JSON.stringify({ u: username, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_S })));
-  const sig = b64url(await hmac(cfg.secret + cfg.password, payload));
-  return `${payload}.${sig}`;
+  const payload: SessionPayload = { ...p, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_S };
+  const body = b64url(enc.encode(JSON.stringify(payload)));
+  return `${body}.${b64url(await hmac(cfg.secret, body))}`;
 }
 
-export async function verifySessionToken(token: string | undefined): Promise<boolean> {
+/** Podpis + ważność; dla admina także login i odcisk hasła z env. Bez bazy (Edge-safe). */
+export async function verifySessionToken(token: string | undefined): Promise<SessionPayload | null> {
   const cfg = authConfig();
-  if (!cfg || !token) return false;
-  const [payload, sig] = token.split(".");
-  if (!payload || !sig) return false;
-  const expected = b64url(await hmac(cfg.secret + cfg.password, payload));
-  if (!(await safeEqual(sig, expected))) return false;
+  if (!cfg || !token) return null;
+  const [body, sig] = token.split(".");
+  if (!body || !sig) return null;
+  if (!(await safeEqual(sig, b64url(await hmac(cfg.secret, body))))) return null;
+  let p: SessionPayload;
   try {
-    const { u, exp } = JSON.parse(new TextDecoder().decode(fromB64url(payload))) as { u: string; exp: number };
-    return u === cfg.username && exp > Date.now() / 1000;
+    p = JSON.parse(new TextDecoder().decode(fromB64url(body)));
   } catch {
-    return false;
+    return null;
   }
+  if (typeof p.u !== "string" || typeof p.v !== "string" || !(p.exp > Date.now() / 1000)) return null;
+  if (p.k === "a") {
+    return p.u === cfg.username && p.v === (await passwordFingerprint(cfg.password)) ? p : null;
+  }
+  return p.k === "u" ? p : null;
 }

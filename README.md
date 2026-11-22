@@ -23,17 +23,24 @@ npm run dev                    # http://localhost:3000
 | `sources` | kantory (id, nazwa, URL) — synchronizowane z `lib/sources.ts` przy scrapingu |
 | `rate_history` | historia kursów; **nowy wiersz tylko przy zmianie** kupna lub sprzedaży |
 | `scrape_runs` | log każdego scrapingu (czas, sukces/błąd, ile kursów, ile zmian) |
+| `users` | konta dodane przez administratora (login, hash hasła scrypt, kto i kiedy dodał) |
 
 Bieżący kurs = najnowszy wiersz w `rate_history` dla (kantor, waluta). Zmiana jest liczona
 względem poprzedniej **różnej** wartości.
 
-## Logowanie
+## Logowanie i użytkownicy
 
 Cała aplikacja (strony i API) jest za logowaniem — `middleware.ts` przepuszcza tylko `/login`
-i `/api/cron` (ten ma własny sekret). Jeden użytkownik, dane w zmiennych środowiskowych:
-`AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_SECRET` (min. 32 znaki). Sesja to podpisane ciasteczko
-`httpOnly` ważne 30 dni; **zmiana `AUTH_PASSWORD` wylogowuje wszystkich**. Bez tych zmiennych
-nikt się nie zaloguje (aplikacja jest zamknięta, a nie otwarta).
+i `/api/cron` (ten ma własny sekret).
+
+- **Administrator** — konto z `AUTH_USERNAME` / `AUTH_PASSWORD` (zmienne środowiskowe).
+  Widzi link **Użytkownicy** (`/uzytkownicy`): dodaje konta, zmienia im hasła, usuwa je.
+- **Użytkownicy** — dodawani przez administratora, trzymani w tabeli `users` (hasło jako hash scrypt).
+  Widzą kursy, nie mają dostępu do zarządzania kontami.
+
+Sesja to podpisane (`AUTH_SECRET`, min. 32 znaki) ciasteczko `httpOnly` ważne 30 dni, z odciskiem
+hasła: zmiana hasła albo usunięcie konta od razu wylogowuje tę osobę (każda strona i API sprawdza
+konto w bazie — `lib/session.ts`). Bez zmiennych `AUTH_*` nikt się nie zaloguje.
 
 ## Wdrożenie na Vercel + Neon
 

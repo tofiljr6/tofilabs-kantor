@@ -6,6 +6,7 @@ import Flag from "@/components/Flag";
 import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
 import { fmtDateTime, fmtDiff, fmtPct, fmtRate } from "@/lib/format";
+import type { CurrentUser } from "@/lib/session";
 import type { RateSide, RatesState, StoredRate } from "@/lib/types";
 
 const fmtTime = (iso: string | null) => fmtDateTime(iso, true);
@@ -45,11 +46,18 @@ function RateCell({ side }: { side: RateSide | undefined }) {
   );
 }
 
-export default function Dashboard({ initial, intervalMs }: { initial: RatesState; intervalMs: number }) {
+export default function Dashboard({
+  initial,
+  intervalMs,
+  user,
+}: {
+  initial: RatesState;
+  intervalMs: number;
+  user: CurrentUser;
+}) {
   const [state, setState] = useState(initial);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
-  const [onlyChanged, setOnlyChanged] = useState(false);
   const [now, setNow] = useState<number | null>(null); // tylko w przeglądarce
   const [preview, setPreview] = useState<Anchor | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,13 +106,8 @@ export default function Dashboard({ initial, intervalMs }: { initial: RatesState
     }
     const q = query.trim().toLowerCase();
     return [...bySymbol.values()]
-      .filter((row) => !q || row.symbol.toLowerCase().includes(q) || row.name.toLowerCase().includes(q))
-      .filter(
-        (row) =>
-          !onlyChanged ||
-          Object.values(row.perSource).some((r) => r.buy.prev != null || r.sell.prev != null),
-      );
-  }, [sources, query, onlyChanged]);
+      .filter((row) => !q || row.symbol.toLowerCase().includes(q) || row.name.toLowerCase().includes(q));
+  }, [sources, query]);
 
   const errors = sources.filter((s) => s.error);
   const nextIn = state.updatedAt && now != null ? Math.max(0, Date.parse(state.updatedAt) + intervalMs - now) : 0;
@@ -127,13 +130,13 @@ export default function Dashboard({ initial, intervalMs }: { initial: RatesState
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <label className="check">
-            <input type="checkbox" checked={onlyChanged} onChange={(e) => setOnlyChanged(e.target.checked)} />
-            Tylko ze zmianą
-          </label>
           <button onClick={() => load(true)} disabled={loading}>
             {loading ? "Pobieram…" : "Odśwież teraz"}
           </button>
+          <span className="userLabel">{user.username}</span>
+          {user.isAdmin && (
+            <Link href="/uzytkownicy" className="navLink">Użytkownicy</Link>
+          )}
           <form action={logout}>
             <button type="submit" className="secondary">Wyloguj</button>
           </form>

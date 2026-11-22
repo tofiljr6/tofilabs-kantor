@@ -41,3 +41,14 @@ UPDATE rate_history SET symbol = 'RON' WHERE symbol = 'ROL';
 UPDATE rate_history SET symbol = 'AZN' WHERE symbol = 'AZM';
 UPDATE rate_history SET symbol = 'BYN' WHERE symbol = 'BYB';
 UPDATE rate_history SET symbol = upper(symbol) WHERE symbol <> upper(symbol);
+
+-- Użytkownicy dodawani przez administratora (konto z AUTH_USERNAME / AUTH_PASSWORD).
+-- Hasło: scrypt, format "scrypt$N$r$p$salt$hash" (base64url).
+CREATE TABLE IF NOT EXISTS users (
+  id            bigserial PRIMARY KEY,
+  username      text NOT NULL,
+  password_hash text NOT NULL,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  created_by    text NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users (lower(username));

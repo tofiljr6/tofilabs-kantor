@@ -4,6 +4,7 @@ import Flag from "@/components/Flag";
 import HistoryChart from "@/components/HistoryChart";
 import { getHistory, parseRange, RANGES, type RangeKey } from "@/lib/history";
 import { fmtDateTime, fmtDiff, fmtPct, fmtRate } from "@/lib/format";
+import { requireUser } from "@/lib/session";
 import type { HistoryPoint } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,7 @@ export default async function CurrencyPage({
   params: Promise<{ symbol: string }>;
   searchParams: Promise<{ range?: string }>;
 }) {
+  await requireUser();
   const { symbol: raw } = await params;
   const symbol = decodeURIComponent(raw);
   const range = parseRange((await searchParams).range);
