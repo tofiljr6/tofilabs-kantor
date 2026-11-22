@@ -10,6 +10,7 @@ import type { CurrentUser } from "@/lib/session";
 import type { RateSide, RatesState, StoredRate } from "@/lib/types";
 
 const fmtTime = (iso: string | null) => fmtDateTime(iso, true);
+const POLL_MS = 30_000;
 
 
 function RateCell({ side }: { side: RateSide | undefined }) {
@@ -71,26 +72,49 @@ export default function Dashboard({
     setPreview(null);
   };
 
+  const busy = useRef(false);
+  const lastAuto = useRef(0);
+
   const load = useCallback(async (force: boolean) => {
-    setLoading(true);
+    if (busy.current && !force) return;
+    busy.current = true;
+    if (force) setLoading(true);
     try {
       const res = await fetch("/api/rates", { method: force ? "POST" : "GET", cache: "no-store" });
-      if (res.ok) setState(await res.json());
+      if (res.status === 401) window.location.href = "/login";
+      else if (res.ok) setState(await res.json());
+    } catch {
+      // brak sieci — spróbujemy przy następnym cyklu
     } finally {
-      setLoading(false);
+      busy.current = false;
+      if (force) setLoading(false);
     }
   }, []);
 
-  // Auto-odświeżanie co interwał + zegar do odliczania
+  // Co 30 s pytamy serwer o stan (tani odczyt z bazy; serwer sam scrapuje, gdy dane mają > 5 min,
+  // a nowe kursy zebrane przez harmonogram /api/cron pojawią się bez przeładowania).
+  // Po powrocie na kartę — od razu, bo przeglądarki usypiają timery w tle.
   useEffect(() => {
-    const auto = setInterval(() => load(false), intervalMs);
     setNow(Date.now());
     const tick = setInterval(() => setNow(Date.now()), 1000);
+    const poll = setInterval(() => load(false), POLL_MS);
+    const onVisible = () => document.visibilityState === "visible" && load(false);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
-      clearInterval(auto);
       clearInterval(tick);
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [load, intervalMs]);
+  }, [load]);
+
+  // Licznik doszedł do zera → pobierz od razu (najwyżej raz na 15 s, gdyby scraping się przeciągał).
+  const due = state.updatedAt != null && now != null && Date.parse(state.updatedAt) + intervalMs <= now;
+  useEffect(() => {
+    if (due && Date.now() - lastAuto.current > 15_000) {
+      lastAuto.current = Date.now();
+      load(false);
+    }
+  }, [due, now, load]);
 
   const sources = useMemo(() => Object.values(state.sources), [state]);
 
@@ -120,7 +144,8 @@ export default function Dashboard({
         <div>
           <h1>Kursy walut</h1>
           <p className="muted">
-            Ostatni scraping: <strong>{fmtTime(state.updatedAt)}</strong> {now != null && <> · następny za {mm}:{ss}</>}
+            Ostatni scraping: <strong>{fmtTime(state.updatedAt)}</strong>{" "}
+            {now != null && (due ? <> · pobieram nowe kursy…</> : <> · następny za {mm}:{ss}</>)}
           </p>
         </div>
         <div className="controls">
