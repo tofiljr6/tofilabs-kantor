@@ -10,9 +10,11 @@ type Props = {
   to: string;
   height?: number;
   compact?: boolean;
+  /** false = legenda rysowana wyżej (np. raz dla kilku wykresów) */
+  legend?: boolean;
 };
 
-const SERIES = [
+export const SERIES = [
   { key: "buy", label: "Kupuje", cls: "s1" },
   { key: "sell", label: "Sprzedaje", cls: "s2" },
 ] as const;
@@ -49,7 +51,7 @@ function valueAt(points: HistoryPoint[], t: number): HistoryPoint | null {
   return cur;
 }
 
-export default function HistoryChart({ points, from, to, height = 260, compact = false }: Props) {
+export default function HistoryChart({ points, from, to, height = 260, compact = false, legend = true }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
   const [hoverT, setHoverT] = useState<number | null>(null);
@@ -122,13 +124,7 @@ export default function HistoryChart({ points, from, to, height = 260, compact =
 
   return (
     <div className={`chart ${compact ? "compact" : ""}`} ref={wrapRef}>
-      <div className="legend">
-        {SERIES.map((s) => (
-          <span key={s.key} className="legendItem">
-            <span className={`swatch ${s.cls}`} /> {s.label}
-          </span>
-        ))}
-      </div>
+      {legend && <Legend />}
       <div className="plot">
         <svg width={width} height={height} role="img" aria-label="Wykres kursu kupna i sprzedaży">
           {yTicks.map((v) => (
@@ -192,6 +188,18 @@ export default function HistoryChart({ points, from, to, height = 260, compact =
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+export function Legend() {
+  return (
+    <div className="legend">
+      {SERIES.map((s) => (
+        <span key={s.key} className="legendItem">
+          <span className={`swatch ${s.cls}`} /> {s.label}
+        </span>
+      ))}
     </div>
   );
 }

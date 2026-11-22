@@ -7,14 +7,20 @@ export const SCRAPE_INTERVAL_MS = 5 * 60 * 1000;
 // Stały klucz blokady — chroni przed równoległym scrapingiem z kilku instancji (Vercel).
 const LOCK_KEY = 482_917_001;
 
-async function fetchSource(src: Source): Promise<ScrapedRate[]> {
-  const res = await fetch(src.url, {
+async function fetchHtml(url: string): Promise<string> {
+  const res = await fetch(url, {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; tofilabs-kantor/0.1)" },
     cache: "no-store",
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const rates = src.parse(await res.text());
+  return res.text();
+}
+
+async function fetchSource(src: Source, pages: Map<string, Promise<string>>): Promise<ScrapedRate[]> {
+  // ten sam URL dla kilku źródeł → jedno pobranie
+  if (!pages.has(src.url)) pages.set(src.url, fetchHtml(src.url));
+  const rates = src.parse(await pages.get(src.url)!);
   if (rates.length === 0) throw new Error("Nie znaleziono tabeli kursów (zmieniła się struktura strony?)");
   return rates;
 }
@@ -26,7 +32,8 @@ export function scrapeAll(): Promise<RatesState> {
     try {
       const startedAt = new Date();
       // Pobieranie stron poza transakcją, żeby nie trzymać połączenia z bazą.
-      const results = await Promise.allSettled(SOURCES.map(fetchSource));
+      const pages = new Map<string, Promise<string>>();
+      const results = await Promise.allSettled(SOURCES.map((s) => fetchSource(s, pages)));
 
       const client = await db().connect();
       try {

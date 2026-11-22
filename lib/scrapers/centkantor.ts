@@ -1,10 +1,6 @@
 import * as cheerio from "cheerio";
 import type { ScrapedRate } from "../types";
-
-function parseNum(text: string): number | null {
-  const n = parseFloat(text.replace(",", ".").trim());
-  return Number.isFinite(n) ? n : null;
-}
+import { normalize, parseRate } from "./util";
 
 export function parseCentKantor(html: string): ScrapedRate[] {
   const $ = cheerio.load(html);
@@ -16,9 +12,9 @@ export function parseCentKantor(html: string): ScrapedRate[] {
     rates.push({
       symbol,
       name: row.find(".c_name").text().trim(),
-      buy: parseNum(row.find(".c_buy").text()),
-      sell: parseNum(row.find(".c_sell").text()),
+      buy: parseRate(row.find(".c_buy").text()),
+      sell: parseRate(row.find(".c_sell").text()),
     });
   });
-  return rates;
+  return normalize(rates);
 }

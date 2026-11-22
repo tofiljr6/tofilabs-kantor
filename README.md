@@ -36,6 +36,21 @@ względem poprzedniej **różnej** wartości.
 
 Kod nie wymaga zmian — sterownik `pg` łączy się tak samo z lokalnym Postgresem i z Neonem.
 
+## Źródła (Wrocław)
+
+| Kolumna | Strona | Jak scrapujemy |
+|---|---|---|
+| Kantor CENT | centkantor.pl/kursy-walut | tabela `#ex_table` |
+| Kantor KURS — detal / hurt | kantorkurs.pl/wroclaw | dwie tabele po nagłówkach „Ceny detaliczne” / „Ceny hurtowe” (jedno pobranie) |
+| Kantor Sprawa | kantorsprawa.pl/wroclaw | payload Next.js (`self.__next_f`), lista `currencies` oddziału `wroclaw` — kursy „W kantorze” |
+| Kantor Central | kantorcentral.pl/wroclaw | `table.currency-table` |
+| Kantor Gant — Oławska 5 | kantorygant.pl/kantor/Wroclaw/Olawska-5 | `table.currency-table-full` |
+| Kantor PLEX — detal / hurt | kantorplex.pl/wroclaw-kurs-detal, kantorplex.pl | wiersze tabel: kod waluty + 2 liczby (parser ogólny) |
+| Kantor Tukan | kantortukan.pl | `#desk-table tr[data-waluta]` (ceny hurtowe od 1 000 zł) |
+
+Różne kody tej samej waluty (np. `TRL`→`TRY`, `EURB`→`EUB`, `NEW`→`USN`, `1US`/`USDJ`→`US1`)
+są ujednolicane w `lib/currencies.ts`, żeby trafiały do jednego wiersza.
+
 ## Dodanie kolejnego kantoru
 
 1. Parser w `lib/scrapers/<kantor>.ts` zwracający `ScrapedRate[]`.

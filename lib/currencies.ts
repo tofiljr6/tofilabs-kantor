@@ -1,17 +1,124 @@
-// Symbol waluty (tak jak na stronach kantorów) → kod kraju ISO 3166-1 alpha-2 dla flagi.
-// Uwaga: kantory używają też starych/własnych kodów (TRL, ROL, AZM, BYB, US1, *b = bilon).
-const FLAG_BY_SYMBOL: Record<string, string> = {
-  EUR: "eu", EUB: "eu", USD: "us", US1: "us", CHF: "ch", CHB: "ch", GBP: "gb", GBB: "gb",
-  CZK: "cz", CZB: "cz", DKK: "dk", NOK: "no", SEK: "se", CAD: "ca", AUD: "au", JPY: "jp",
-  TRL: "tr", TRY: "tr", RUB: "ru", HUF: "hu", AED: "ae", ALL: "al", AMD: "am", UAH: "ua",
-  AZM: "az", AZN: "az", BAM: "ba", ROL: "ro", RON: "ro", BRL: "br", BYB: "by", BYN: "by",
-  CLP: "cl", CNY: "cn", COP: "co", DOP: "do", EGP: "eg", GEL: "ge", HKD: "hk", IDR: "id",
-  INR: "in", ILS: "il", ISK: "is", JOD: "jo", KES: "ke", KRW: "kr", KZT: "kz", LKR: "lk",
-  MAD: "ma", MDL: "md", MKD: "mk", MUR: "mu", MVR: "mv", MXN: "mx", MYR: "my", NPR: "np",
-  NZD: "nz", OMR: "om", PEN: "pe", PHP: "ph", RSD: "rs", SAR: "sa", SCR: "sc", SGD: "sg",
-  THB: "th", TND: "tn", QAR: "qa", VND: "vn", ZAR: "za", TWD: "tw", PLN: "pl", BGN: "bg",
+// Wspólny słownik walut: kanoniczny symbol → flaga (ISO 3166-1 alpha-2) + polska nazwa.
+// Kantory używają różnych kodów dla tej samej waluty — ALIASES sprowadza je do jednego,
+// żeby w tabeli ta sama waluta z różnych kantorów była w jednym wierszu.
+
+/** Stare / niestandardowe kody → kod kanoniczny. */
+const ALIASES: Record<string, string> = {
+  TRL: "TRY", // stara lira turecka
+  ROL: "RON", // stary lej rumuński
+  AZM: "AZN", // stary manat azerski
+  BYB: "BYN", // stary rubel białoruski
+  EURB: "EUB", // Gant: euro monety
+  NEW: "USN", // Central, Sprawa: dolar — nowe banknoty (od 2009)
+  "1US": "US1", // Sprawa: dolar — nominały 1$, 2$
+  USDJ: "US1", // Gant: dolar — nominały 1$, 2$, 5$
+  USD1: "US1", // Plex: dolar — "jedynki"
+};
+
+export function canonicalSymbol(raw: string): string {
+  const s = raw.trim().toUpperCase(); // EUb → EUB, GBb → GBB itd.
+  return ALIASES[s] ?? s;
+}
+
+type Info = [flag: string | null, name: string];
+
+const CURRENCIES: Record<string, Info> = {
+  EUR: ["eu", "Euro"],
+  EUB: ["eu", "Euro — bilon"],
+  USD: ["us", "Dolar amerykański"],
+  USN: ["us", "Dolar amerykański — nowe banknoty (od 2009)"],
+  US1: ["us", "Dolar amerykański — małe nominały"],
+  USO: ["us", "Dolar amerykański — stare banknoty (do 2007)"],
+  USM: ["us", "Dolar amerykański — małe głowy"],
+  USH: ["us", "Dolar amerykański — duże głowy"],
+  USA: ["us", "Dolar amerykański — bilon"],
+  GBP: ["gb", "Funt brytyjski"],
+  GBB: ["gb", "Funt brytyjski — bilon"],
+  CHF: ["ch", "Frank szwajcarski"],
+  CHB: ["ch", "Frank szwajcarski — bilon"],
+  CZK: ["cz", "Korona czeska"],
+  CZB: ["cz", "Korona czeska — bilon"],
+  DKK: ["dk", "Korona duńska"],
+  NOK: ["no", "Korona norweska"],
+  SEK: ["se", "Korona szwedzka"],
+  ISK: ["is", "Korona islandzka"],
+  CAD: ["ca", "Dolar kanadyjski"],
+  AUD: ["au", "Dolar australijski"],
+  NZD: ["nz", "Dolar nowozelandzki"],
+  HKD: ["hk", "Dolar hongkoński"],
+  SGD: ["sg", "Dolar singapurski"],
+  TWD: ["tw", "Dolar tajwański"],
+  JMD: ["jm", "Dolar jamajski"],
+  BSD: ["bs", "Dolar bahamski"],
+  XCD: [null, "Dolar wschodniokaraibski"],
+  JPY: ["jp", "Jen japoński"],
+  CNY: ["cn", "Juan chiński"],
+  KRW: ["kr", "Won południowokoreański"],
+  HUF: ["hu", "Forint węgierski"],
+  RON: ["ro", "Lej rumuński"],
+  MDL: ["md", "Lej mołdawski"],
+  BGN: ["bg", "Lew bułgarski"],
+  TRY: ["tr", "Lira turecka"],
+  RUB: ["ru", "Rubel rosyjski"],
+  BYN: ["by", "Rubel białoruski"],
+  UAH: ["ua", "Hrywna ukraińska"],
+  GEL: ["ge", "Lari gruzińskie"],
+  AMD: ["am", "Dram armeński"],
+  AZN: ["az", "Manat azerski"],
+  KZT: ["kz", "Tenge kazachskie"],
+  ALL: ["al", "Lek albański"],
+  BAM: ["ba", "Marka BiH"],
+  MKD: ["mk", "Denar macedoński"],
+  RSD: ["rs", "Dinar serbski"],
+  AED: ["ae", "Dirham ZEA"],
+  SAR: ["sa", "Rial saudyjski"],
+  QAR: ["qa", "Rial katarski"],
+  OMR: ["om", "Rial omański"],
+  KWD: ["kw", "Dinar kuwejcki"],
+  BHD: ["bh", "Dinar bahrajński"],
+  JOD: ["jo", "Dinar jordański"],
+  ILS: ["il", "Szekel izraelski"],
+  EGP: ["eg", "Funt egipski"],
+  MAD: ["ma", "Dirham marokański"],
+  TND: ["tn", "Dinar tunezyjski"],
+  ZAR: ["za", "Rand południowoafrykański"],
+  KES: ["ke", "Szyling kenijski"],
+  UGX: ["ug", "Szyling ugandyjski"],
+  TZS: ["tz", "Szyling tanzański"],
+  BWP: ["bw", "Pula botswańska"],
+  GMD: ["gm", "Dalasi gambijskie"],
+  MUR: ["mu", "Rupia maurytyjska"],
+  SCR: ["sc", "Rupia seszelska"],
+  CVE: ["cv", "Escudo Zielonego Przylądka"],
+  INR: ["in", "Rupia indyjska"],
+  NPR: ["np", "Rupia nepalska"],
+  LKR: ["lk", "Rupia lankijska"],
+  MVR: ["mv", "Rufiyaa malediwska"],
+  IDR: ["id", "Rupia indonezyjska"],
+  THB: ["th", "Baht tajski"],
+  VND: ["vn", "Dong wietnamski"],
+  MYR: ["my", "Ringgit malezyjski"],
+  PHP: ["ph", "Peso filipińskie"],
+  KHR: ["kh", "Riel kambodżański"],
+  LAK: ["la", "Kip laotański"],
+  MOP: ["mo", "Pataca Makau"],
+  PGK: ["pg", "Kina papuaska"],
+  VUV: ["vu", "Vatu vanuackie"],
+  XPF: ["pf", "Frank CFP"],
+  MXN: ["mx", "Peso meksykańskie"],
+  BRL: ["br", "Real brazylijski"],
+  CLP: ["cl", "Peso chilijskie"],
+  COP: ["co", "Peso kolumbijskie"],
+  PEN: ["pe", "Sol peruwiański"],
+  DOP: ["do", "Peso dominikańskie"],
+  PLN: ["pl", "Złoty polski"],
 };
 
 export function flagCode(symbol: string): string | null {
-  return FLAG_BY_SYMBOL[symbol.toUpperCase()] ?? null;
+  return CURRENCIES[canonicalSymbol(symbol)]?.[0] ?? null;
+}
+
+/** Ujednolicona nazwa waluty; gdy brak w słowniku — nazwa podana przez kantor. */
+export function currencyName(symbol: string, fallback: string): string {
+  return CURRENCIES[canonicalSymbol(symbol)]?.[1] ?? fallback;
 }

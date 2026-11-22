@@ -33,3 +33,11 @@ CREATE TABLE IF NOT EXISTS rate_history (
   observed_at timestamptz NOT NULL
 );
 CREATE INDEX IF NOT EXISTS rate_history_lookup_idx ON rate_history (source_id, symbol, observed_at DESC);
+
+-- 2026-11: ujednolicenie symboli walut między kantorami (lib/currencies.ts → canonicalSymbol).
+-- Idempotentne: po pierwszym uruchomieniu nic już nie pasuje.
+UPDATE rate_history SET symbol = 'TRY' WHERE symbol = 'TRL';
+UPDATE rate_history SET symbol = 'RON' WHERE symbol = 'ROL';
+UPDATE rate_history SET symbol = 'AZN' WHERE symbol = 'AZM';
+UPDATE rate_history SET symbol = 'BYN' WHERE symbol = 'BYB';
+UPDATE rate_history SET symbol = upper(symbol) WHERE symbol <> upper(symbol);

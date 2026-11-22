@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import HistoryChart from "./HistoryChart";
+import HistoryChart, { Legend } from "./HistoryChart";
 import type { CurrencyHistory } from "@/lib/types";
 
 // Pamięć podręczna po stronie klienta (60 s), żeby kolejne najechania nie odpytywały API.
@@ -30,23 +30,30 @@ export default function HoverPreview({ anchor }: { anchor: Anchor }) {
     };
   }, [anchor.symbol]);
 
-  const W = 380;
+  // Siatka: 1 kolumna dla 1 kantoru, 2 dla więcej; ~118 px wysokości na wiersz wykresów
+  const n = data?.sources.length ?? 1;
+  const cols = n > 1 ? 2 : 1;
+  const W = cols === 1 ? 380 : 620;
+  const estHeight = 44 + Math.ceil(n / cols) * 118;
   const left = Math.min(anchor.rect.right + 12, window.innerWidth - W - 12);
-  const top = Math.max(12, Math.min(anchor.rect.top - 20, window.innerHeight - 320));
+  const top = Math.max(12, Math.min(anchor.rect.top - 20, window.innerHeight - estHeight - 12));
 
   return (
     <div className="preview" style={{ left, top, width: W }}>
       <div className="previewHead">
         <strong>{anchor.symbol}</strong> <span className="muted small">· ostatnie 24 h · kliknij, by otworzyć</span>
+        <Legend />
       </div>
       {data === undefined && <p className="muted small">Ładuję…</p>}
       {data === null && <p className="muted small">Brak historii.</p>}
-      {data?.sources.map((s) => (
-        <div key={s.id} className="previewSource">
-          <div className="small">{s.name}</div>
-          <HistoryChart points={s.points} from={data.from} to={data.to} height={140} compact />
-        </div>
-      ))}
+      <div className="previewGrid">
+        {data?.sources.map((s) => (
+          <div key={s.id} className="previewSource">
+            <div className="small">{s.name}</div>
+            <HistoryChart points={s.points} from={data.from} to={data.to} height={80} compact legend={false} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

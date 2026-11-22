@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { currencyName } from "./currencies";
 import { db } from "./db";
 import type { Source } from "./sources";
 import type { CurrencyHistory, RatesState, ScrapedRate, SourceSnapshot, StoredRate } from "./types";
@@ -125,7 +126,7 @@ export async function loadState(sources: Source[]): Promise<RatesState> {
     const list = ratesBySource.get(r.source_id) ?? [];
     list.push({
       symbol: r.symbol,
-      name: r.name,
+      name: currencyName(r.symbol, r.name),
       buy: { value: num(r.buy), prev: num(r.prev_buy), changedAt: iso(r.buy_changed_at) },
       sell: { value: num(r.sell), prev: num(r.prev_sell), changedAt: iso(r.sell_changed_at) },
     });
@@ -177,7 +178,7 @@ export async function loadHistory(sources: Source[], symbol: string, hours: numb
 
   return {
     symbol,
-    name: rows[rows.length - 1].name,
+    name: currencyName(symbol, rows[rows.length - 1].name),
     from: from.toISOString(),
     to: to.toISOString(),
     sources: sources
