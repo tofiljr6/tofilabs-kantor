@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Kursy walut — dashboard",
   description: "Kursy walut z kantorów (web scraping)",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({

@@ -10,7 +10,7 @@ Wymaga lokalnego PostgreSQL (np. `brew install postgresql@18 && brew services st
 
 ```bash
 createdb tofilabs_kantor
-cp .env.example .env.local     # DATABASE_URL=postgres://localhost:5432/tofilabs_kantor
+cp .env.example .env.local     # uzupełnij DATABASE_URL, AUTH_* i CRON_SECRET
 npm install
 npm run db:migrate             # tworzy tabele (db/schema.sql, idempotentne)
 npm run dev                    # http://localhost:3000
@@ -27,14 +27,46 @@ npm run dev                    # http://localhost:3000
 Bieżący kurs = najnowszy wiersz w `rate_history` dla (kantor, waluta). Zmiana jest liczona
 względem poprzedniej **różnej** wartości.
 
-## Neon (produkcja / Vercel)
+## Logowanie
 
-1. Załóż projekt na [neon.tech](https://neon.tech), skopiuj **pooled** connection string
-   (host z `-pooler`, z `?sslmode=require`).
-2. Odpal schemat na Neonie: `DATABASE_URL="postgres://…neon.tech/neondb?sslmode=require" npm run db:migrate`
-3. Na Vercelu ustaw zmienną środowiskową `DATABASE_URL` na ten sam string.
+Cała aplikacja (strony i API) jest za logowaniem — `middleware.ts` przepuszcza tylko `/login`
+i `/api/cron` (ten ma własny sekret). Jeden użytkownik, dane w zmiennych środowiskowych:
+`AUTH_USERNAME`, `AUTH_PASSWORD`, `AUTH_SECRET` (min. 32 znaki). Sesja to podpisane ciasteczko
+`httpOnly` ważne 30 dni; **zmiana `AUTH_PASSWORD` wylogowuje wszystkich**. Bez tych zmiennych
+nikt się nie zaloguje (aplikacja jest zamknięta, a nie otwarta).
 
-Kod nie wymaga zmian — sterownik `pg` łączy się tak samo z lokalnym Postgresem i z Neonem.
+## Wdrożenie na Vercel + Neon
+
+1. **Neon** — załóż projekt na [neon.tech](https://neon.tech) w regionie **Frankfurt (eu-central-1)**
+   i skopiuj connection string **pooled** (host z `-pooler`, z `?sslmode=require`).
+   Można też dodać Neon z Vercel Marketplace — wtedy `DATABASE_URL` ustawi się sam.
+2. **Vercel** — *Add New → Project*, zaimportuj repo z GitHuba (framework: Next.js, bez zmian w ustawieniach).
+3. **Zmienne środowiskowe** (Project → Settings → Environment Variables):
+
+   | Zmienna | Wartość |
+   |---|---|
+   | `DATABASE_URL` | pooled connection string z Neona |
+   | `AUTH_USERNAME` | login do dashboardu |
+   | `AUTH_PASSWORD` | hasło (długie!) |
+   | `AUTH_SECRET` | `openssl rand -hex 32` |
+   | `CRON_SECRET` | `openssl rand -hex 24` |
+
+4. **Deploy.** Build sam tworzy tabele w bazie (`npm run build` = migracja + `next build`;
+   schemat jest idempotentny). Funkcje działają we Frankfurcie (`vercel.json` → `fra1`), obok bazy.
+
+### Scraping co 5 minut
+
+Dashboard sam pobiera kursy, gdy ktoś go ogląda, a dane mają > 5 min. Żeby historia zbierała się
+też bez oglądających, `/api/cron` musi być wołany co 5 minut:
+
+- **Plan Hobby (darmowy)** — Vercel Cron działa tam maks. raz dziennie, więc używamy GitHub Actions
+  (`.github/workflows/scrape.yml`). W repo dodaj sekrety *Settings → Secrets and variables → Actions*:
+  `APP_URL` (np. `https://tofilabs-kantor.vercel.app`) i `CRON_SECRET` (ta sama wartość co na Vercelu).
+  GitHub potrafi opóźniać takie zadania o kilka minut.
+- **Plan Pro** — można zamiast tego dodać do `vercel.json`:
+  `"crons": [{ "path": "/api/cron", "schedule": "*/5 * * * *" }]` (Vercel sam wyśle `CRON_SECRET`).
+
+Sprawdzenie ręczne: `curl -H "Authorization: Bearer $CRON_SECRET" https://<app>/api/cron`.
 
 ## Źródła (Wrocław)
 

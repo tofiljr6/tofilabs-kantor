@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Flag from "@/components/Flag";
 import HoverPreview, { type Anchor } from "@/components/HoverPreview";
+import { logout } from "./login/actions";
 import { fmtDateTime, fmtDiff, fmtPct, fmtRate } from "@/lib/format";
 import type { RateSide, RatesState, StoredRate } from "@/lib/types";
 
@@ -133,6 +134,9 @@ export default function Dashboard({ initial, intervalMs }: { initial: RatesState
           <button onClick={() => load(true)} disabled={loading}>
             {loading ? "Pobieram…" : "Odśwież teraz"}
           </button>
+          <form action={logout}>
+            <button type="submit" className="secondary">Wyloguj</button>
+          </form>
         </div>
       </header>
 

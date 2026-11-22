@@ -1,0 +1,28 @@
+# Wywołuje /api/cron co 5 minut, żeby kursy zbierały się także wtedy, gdy nikt nie ogląda dashboardu.
+# (Vercel Cron na planie Hobby działa maks. raz dziennie, stąd GitHub Actions.)
+#
+# Wymagane sekrety repozytorium (Settings → Secrets and variables → Actions):
+#   APP_URL      — adres aplikacji na Vercelu, np. https://tofilabs-kantor.vercel.app
+#   CRON_SECRET  — ta sama wartość co zmienna CRON_SECRET na Vercelu
+# Uwaga: GitHub potrafi opóźniać zadania z harmonogramu o kilka–kilkanaście minut.
+name: Scrape rates
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call /api/cron
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Brak sekretów APP_URL / CRON_SECRET — pomijam."; exit 0
+          fi
+          curl -fsS --max-time 90 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron"

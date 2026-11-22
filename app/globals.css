@@ -131,3 +131,18 @@ a:hover { text-decoration: underline; }
 .card .tableWrap { border-radius: 8px; }
 span.up { color: var(--up); }
 span.down { color: var(--down); }
+
+/* --- Logowanie --- */
+button.secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+button.secondary:hover { color: var(--text); }
+.loginPage { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.loginCard { width: 100%; max-width: 360px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px 24px; box-shadow: 0 12px 32px rgba(0,0,0,.12); }
+.loginCard h1 { margin-bottom: 4px; }
+.loginForm { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+.loginForm label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.loginForm input { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+  color: var(--text); font-size: 15px; }
+.loginForm input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.loginForm button { padding: 10px 14px; font-size: 15px; }
+.loginError { color: var(--error); background: var(--error-bg); padding: 8px 10px; border-radius: 8px; font-size: 13px; }
