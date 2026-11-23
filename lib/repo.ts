@@ -193,3 +193,47 @@ export async function loadHistory(sources: Source[], symbol: string, hours: numb
       .filter((s) => s.points.length > 0),
   };
 }
+
+/**
+ * Usuwa historię kursów i log scrapingu starsze niż `hours` godzin.
+ * Zostawia ostatni wpis sprzed granicy dla każdej pary (kantor, waluta) — to kurs obowiązujący
+ * w chwili granicy (albo bieżący, jeśli od tamtej pory się nie zmienił), więc dashboard nie traci
+ * kursów, które długo stoją w miejscu, a wykresy dalej zaczynają się od lewej krawędzi.
+ * Z logu zostawia ostatnie uruchomienie i ostatnie udane uruchomienie każdego kantoru.
+ */
+export async function deleteOlderThan(hours: number): Promise<{ cutoff: string; rates: number; runs: number }> {
+  const cutoff = new Date(Date.now() - hours * 3600_000);
+  const client = await db().connect();
+  try {
+    await client.query("BEGIN");
+    const rates = await client.query(
+      `DELETE FROM rate_history h
+       WHERE h.observed_at < $1
+         AND h.id NOT IN (
+           SELECT DISTINCT ON (source_id, symbol) id
+           FROM rate_history
+           WHERE observed_at < $1
+           ORDER BY source_id, symbol, observed_at DESC, id DESC
+         )`,
+      [cutoff],
+    );
+    const runs = await client.query(
+      `DELETE FROM scrape_runs r
+       WHERE r.started_at < $1
+         AND r.id NOT IN (
+           SELECT DISTINCT ON (source_id) id FROM scrape_runs ORDER BY source_id, started_at DESC, id DESC
+         )
+         AND r.id NOT IN (
+           SELECT DISTINCT ON (source_id) id FROM scrape_runs WHERE ok ORDER BY source_id, started_at DESC, id DESC
+         )`,
+      [cutoff],
+    );
+    await client.query("COMMIT");
+    return { cutoff: cutoff.toISOString(), rates: rates.rowCount ?? 0, runs: runs.rowCount ?? 0 };
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+}
