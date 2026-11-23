@@ -41,8 +41,8 @@ const changeTitle = (side: RateSide) =>
   changeOf(side).dir ? `Poprzednio: ${fmtRate(side.prev)} · zmiana: ${fmtTime(side.changedAt)}` : undefined;
 
 /**
- * Porównanie z naszym kantorem (HOME_SOURCE_ID): zielona ramka, gdy konkurencja KUPUJE drożej
- * niż my, czerwona, gdy SPRZEDAJE taniej. Nasza kolumna nie dostaje ramek.
+ * Porównanie z naszym kantorem (HOME_SOURCE_ID): zielona ramka, gdy konkurencja KUPUJE taniej
+ * niż my, czerwona, gdy SPRZEDAJE drożej. Nasza kolumna nie dostaje ramek.
  */
 type Beat = "beatBuy" | "beatSell" | null;
 
@@ -51,15 +51,15 @@ function beatOf(src: string, kind: "buy" | "sell", r: StoredRate | undefined, ho
   const mine = home[kind].value;
   const theirs = r[kind].value;
   if (mine == null || theirs == null) return null;
-  if (kind === "buy") return theirs > mine ? "beatBuy" : null;
-  return theirs < mine ? "beatSell" : null;
+  if (kind === "buy") return theirs < mine ? "beatBuy" : null;
+  return theirs > mine ? "beatSell" : null;
 }
 
 const beatTitle = (beat: Beat, home: StoredRate | undefined) =>
   beat === "beatBuy"
-    ? `Kupuje drożej niż Dorex (${fmtRate(home?.buy.value)})`
+    ? `Kupuje taniej niż Dorex (${fmtRate(home?.buy.value)})`
     : beat === "beatSell"
-      ? `Sprzedaje taniej niż Dorex (${fmtRate(home?.sell.value)})`
+      ? `Sprzedaje drożej niż Dorex (${fmtRate(home?.sell.value)})`
       : undefined;
 
 const joinTitle = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(" · ") || undefined;
@@ -306,8 +306,8 @@ export default function Dashboard({
       {preview && <HoverPreview anchor={preview} />}
       <p className="muted small foot">
         ▲ zielony — kurs wzrósł, ▼ czerwony — kurs spadł (o tyle zł względem poprzedniej różnej wartości).
-        Porównanie z Dorexem: <span className="legendBox beatBuy">zielona ramka</span> — kupuje drożej niż my,{" "}
-        <span className="legendBox beatSell">czerwona ramka</span> — sprzedaje taniej niż my.
+        Porównanie z Dorexem: <span className="legendBox beatBuy">zielona ramka</span> — kupuje taniej niż my,{" "}
+        <span className="legendBox beatSell">czerwona ramka</span> — sprzedaje drożej niż my.
         Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
       </p>
     </main>

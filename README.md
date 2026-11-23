@@ -92,7 +92,7 @@ Sprawdzenie ręczne: `curl -H "Authorization: Bearer $CRON_SECRET" https://<app>
 | Tavex — Oławska 9 | tavex.pl/kantor-wroclaw-kursy-walut/?officeId=61 | `table.list-table`; przelicznik z nazwy, np. „(1000)”, wycofane waluty pomijane |
 
 Kursy pozostałych kantorów są porównywane z Dorexem (`lib/home.ts`): zielona ramka — konkurencja
-kupuje drożej, czerwona — sprzedaje taniej.
+kupuje taniej, czerwona — sprzedaje drożej.
 
 Różne kody tej samej waluty (np. `TRL`→`TRY`, `EURB`→`EUB`, `NEW`→`USN`, `1US`/`USDJ`→`US1`)
 są ujednolicane w `lib/currencies.ts`, żeby trafiały do jednego wiersza.
