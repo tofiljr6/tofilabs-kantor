@@ -81,13 +81,18 @@ Sprawdzenie ręczne: `curl -H "Authorization: Bearer $CRON_SECRET" https://<app>
 
 | Kolumna | Strona | Jak scrapujemy |
 |---|---|---|
+| **Dorex** (nasz kantor, 1. kolumna) | dorex.com.pl/kursy-walut | `.currency-table table` — symbol, kupno, sprzedaż |
 | Kantor CENT | centkantor.pl/kursy-walut | tabela `#ex_table` |
 | Kantor KURS — detal / hurt | kantorkurs.pl/wroclaw | dwie tabele po nagłówkach „Ceny detaliczne” / „Ceny hurtowe” (jedno pobranie) |
 | Kantor Sprawa | kantorsprawa.pl/wroclaw | payload Next.js (`self.__next_f`), lista `currencies` oddziału `wroclaw` — kursy „W kantorze” |
 | Kantor Central | kantorcentral.pl/wroclaw | `table.currency-table` |
 | Kantor Gant — Oławska 5 | kantorygant.pl/kantor/Wroclaw/Olawska-5 | `table.currency-table-full` |
 | Kantor PLEX — detal / hurt | kantorplex.pl/wroclaw-kurs-detal, kantorplex.pl | wiersze tabel: kod waluty + 2 liczby (parser ogólny) |
-| Kantor Tukan | kantortukan.pl | `#desk-table tr[data-waluta]` (ceny hurtowe od 1 000 zł) |
+| Kantor Tukan — hurt | kantortukan.pl | `#desk-table tr[data-waluta]` (ceny hurtowe od 1 000 zł) |
+| Tavex — Oławska 9 | tavex.pl/kantor-wroclaw-kursy-walut/?officeId=61 | `table.list-table`; przelicznik z nazwy, np. „(1000)”, wycofane waluty pomijane |
+
+Kursy pozostałych kantorów są porównywane z Dorexem (`lib/home.ts`): zielona ramka — konkurencja
+kupuje drożej, czerwona — sprzedaje taniej.
 
 Różne kody tej samej waluty (np. `TRL`→`TRY`, `EURB`→`EUB`, `NEW`→`USN`, `1US`/`USDJ`→`US1`)
 są ujednolicane w `lib/currencies.ts`, żeby trafiały do jednego wiersza.

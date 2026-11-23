@@ -1,11 +1,14 @@
+import { HOME_SOURCE_ID } from "./home";
 import type { ScrapedRate } from "./types";
 import { parseCentKantor } from "./scrapers/centkantor";
+import { parseDorex } from "./scrapers/dorex";
 import { parseKantorCentral } from "./scrapers/kantorcentral";
 import { parseKantorKursDetal, parseKantorKursHurt } from "./scrapers/kantorkurs";
 import { parseKantorPlex } from "./scrapers/kantorplex";
 import { parseKantorSprawa } from "./scrapers/kantorsprawa";
 import { parseKantorTukan } from "./scrapers/kantortukan";
 import { parseKantorGant } from "./scrapers/kantorygant";
+import { parseTavex } from "./scrapers/tavex";
 
 export type Source = {
   id: string;
@@ -17,7 +20,14 @@ export type Source = {
 // Kolejne kantory: dopisz tu wpis + parser w lib/scrapers/.
 // Kilka źródeł może dzielić ten sam URL — strona jest wtedy pobierana raz na scraping.
 // Kolejność = kolejność kolumn na dashboardzie.
+
 export const SOURCES: Source[] = [
+  {
+    id: HOME_SOURCE_ID,
+    name: "Dorex",
+    url: "https://www.dorex.com.pl/kursy-walut",
+    parse: parseDorex,
+  },
   {
     id: "centkantor",
     name: "Kantor CENT",
@@ -50,7 +60,7 @@ export const SOURCES: Source[] = [
   },
   {
     id: "kantorkurs-hurt",
-    name: "Kantor KURS — hurt (od 7 000 zł)",
+    name: "Kantor KURS — hurt",
     url: "https://kantorkurs.pl/wroclaw/",
     parse: parseKantorKursHurt,
   },
@@ -68,8 +78,15 @@ export const SOURCES: Source[] = [
   },
   {
     id: "kantortukan",
-    name: "Kantor Tukan — hurt (od 1 000 zł)",
+    name: "Kantor Tukan — hurt",
     url: "https://kantortukan.pl/?lang=pl",
     parse: parseKantorTukan,
+  },
+  {
+    id: "tavex-olawska",
+    name: "Tavex — Oławska 9",
+    // officeId=61 = Wrocław, Oławska (bez parametru strona może pokazać inny oddział)
+    url: "https://tavex.pl/kantor-wroclaw-kursy-walut/?officeId=61",
+    parse: parseTavex,
   },
 ];

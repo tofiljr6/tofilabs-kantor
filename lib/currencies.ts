@@ -13,6 +13,11 @@ const ALIASES: Record<string, string> = {
   "1US": "US1", // Sprawa: dolar — nominały 1$, 2$
   USDJ: "US1", // Gant: dolar — nominały 1$, 2$, 5$
   USD1: "US1", // Plex: dolar — "jedynki"
+  USDN: "US1", // Tavex: dolar — banknoty 1, 2, 5 USD
+  EURC: "EUB", // Tavex: euro — bilon
+  GBPB: "GBB", // Dorex: funt — bilon
+  CHFB: "CHB", // Dorex: frank — bilon
+  CZKB: "CZB", // Dorex: korona czeska — bilon
 };
 
 export function canonicalSymbol(raw: string): string {
@@ -113,6 +118,11 @@ const CURRENCIES: Record<string, Info> = {
   DOP: ["do", "Peso dominikańskie"],
   PLN: ["pl", "Złoty polski"],
 };
+
+/** Czy symbol jest w słowniku (odsiewa wycofane waluty typu DEM, ATS, stare banknoty itp.). */
+export function isKnownCurrency(symbol: string): boolean {
+  return canonicalSymbol(symbol) in CURRENCIES;
+}
 
 export function flagCode(symbol: string): string | null {
   return CURRENCIES[canonicalSymbol(symbol)]?.[0] ?? null;
