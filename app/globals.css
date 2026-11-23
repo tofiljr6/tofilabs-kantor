@@ -296,7 +296,9 @@ table.nbp td.num .sub { display: block; font-size: 11px; color: var(--muted); }
 table.nbp td.num .sub.alarm { color: var(--down); font-weight: 600; }
 table.nbp th.sep, table.nbp td.sep { border-left: 2px solid var(--border); }
 table.nbp tr.major td { font-weight: 500; }
-.nbpSummary { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-bottom: 16px; }
+/* 4 karty (EUR, USD, GBP, CHF) na całą szerokość tabeli; na telefonie 2 × 2 */
+.nbpSummary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+@media (max-width: 760px) { .nbpSummary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .nbpStat { background: var(--surface); border: 1px solid var(--border); padding: 12px 14px; }
 .nbpStat .currency { margin-bottom: 8px; }
 .nbpStat dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; font-size: 12px; }
@@ -320,3 +322,65 @@ table.nbp tr.major td { font-weight: 500; }
 
 /* Ostry wygląd: bez zaokrągleń (także w natywnych kontrolkach przeglądarki). */
 input, select, textarea, button { border-radius: 0; }
+
+/* --- Ranking Dorexu (kolumna przed walutą, medale) --- */
+:root { --medal-gold: #f5b301; --medal-silver: #c3c9d0; --medal-bronze: #c9793a; }
+table.rates col.colRank { width: 92px; }
+table.rates.withRank .stickCur { left: 92px; }
+th.rankHead { text-align: center; font-size: 11px; line-height: 1.25; padding: 5px 4px; }
+td.rankCell { padding: 4px 6px; }
+.rankLine { display: flex; align-items: center; gap: 4px; font-size: 11px; line-height: 19px; white-space: nowrap; }
+.rankLabel { width: 30px; font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.medal { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%;
+  font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums; background: var(--head); color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border); }
+.medal.gold { background: var(--medal-gold); color: #3a2800; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+.medal.silver { background: var(--medal-silver); color: #24282d; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+.medal.bronze { background: var(--medal-bronze); color: #2b1505; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+.rankOf { color: var(--muted); font-variant-numeric: tabular-nums; }
+.foot .medal { width: 15px; height: 15px; font-size: 9.5px; vertical-align: -2px; }
+.cardRank { display: flex; gap: 18px; margin: -2px 2px 8px; }
+
+/* --- Jasny motyw (Opcje → Motyw; <html data-theme="light">) --- */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f4f3;
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --border: #e3e3e3;
+  --head: #f2f2f1;
+  --accent: #e65200; /* odrobinę ciemniejszy pomarańcz — czytelny jako tekst na białym */
+  --accent-hover: #c84800;
+  --accent-soft: rgba(255, 92, 0, 0.10);
+  --up: #16a34a;
+  --up-bg: #ecfdf3;
+  --down-bg: #fef2f2;
+  --down: #dc2626;
+  --error-bg: #fef2f2;
+  --error: #b91c1c;
+  --hover: rgba(255, 92, 0, 0.08);
+  --separator: #c8c8c8;
+  --series-buy: #2e9e5b; --series-sell: #d24b4b; --grid: #e8e8e8; --axis: #6b6b6b;
+  --beat-buy: #16a34a; --beat-sell: #dc2626; --frame-buy: #4c9a68; --frame-sell: #c25b5b;
+}
+:root[data-theme="light"] .tableWrap, :root[data-theme="light"] .cards {
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --border: #e6e6e6;
+  --head: #f5f5f4;
+  --accent: #e65200;
+  --hover: rgba(255, 92, 0, 0.08);
+  --separator: #c8c8c8;
+  --home-bg: rgba(255, 92, 0, 0.08);
+}
+:root[data-theme="light"] .preview, :root[data-theme="light"] .tooltip,
+:root[data-theme="light"] .menuPanel, :root[data-theme="light"] .optionsPanel { box-shadow: 0 12px 32px rgba(0,0,0,.12); }
+
+/* --- Opcje: przełącznik motywu --- */
+.optionGroup { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.segmented { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); }
+.segmented button { background: transparent; color: var(--muted); padding: 7px 10px; font-weight: 600; }
+.segmented button:hover:not(.active) { background: var(--accent-soft); color: var(--text); }
+.segmented button.active { background: var(--accent); color: var(--on-accent); }
