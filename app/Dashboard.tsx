@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Flag from "@/components/Flag";
 import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
-import { fmtDateTime, fmtDiff, fmtPct, fmtRate } from "@/lib/format";
+import { fmtDateTime, fmtDiff, fmtRate } from "@/lib/format";
 import type { CurrentUser } from "@/lib/session";
 import type { RateSide, RatesState, StoredRate } from "@/lib/types";
 
@@ -13,37 +13,49 @@ const fmtTime = (iso: string | null) => fmtDateTime(iso, true);
 const POLL_MS = 30_000;
 
 
+type Change = { dir: "up" | "down" | null; diff: number };
+
+function changeOf(side: RateSide): Change {
+  if (side.value == null || side.prev == null || side.prev === 0 || side.prev === side.value) {
+    return { dir: null, diff: 0 };
+  }
+  const diff = side.value - side.prev;
+  return { dir: diff > 0 ? "up" : "down", diff };
+}
+
+/** Kurs + zmiana (kwotowo, bez procentów). Wspólne dla tabeli i kart na telefonie. */
+function RateValue({ side }: { side: RateSide }) {
+  const { dir, diff } = changeOf(side);
+  return (
+    <>
+      <div className="rate">{fmtRate(side.value)}</div>
+      <div className={`delta${dir ? "" : " muted"}`}>
+        {dir ? `${dir === "up" ? "▲ +" : "▼ "}${fmtDiff(diff)}` : "bez zmian"}
+      </div>
+    </>
+  );
+}
+
+const changeTitle = (side: RateSide) =>
+  changeOf(side).dir ? `Poprzednio: ${fmtRate(side.prev)} · zmiana: ${fmtTime(side.changedAt)}` : undefined;
+
 function RateCell({ side }: { side: RateSide | undefined }) {
   if (!side || side.value == null) return <td className="cell muted">—</td>;
-
-  const hasChange = side.prev != null && side.prev !== 0 && side.prev !== side.value;
-  if (!hasChange) {
-    return (
-      <td className="cell">
-        <div className="rate">{fmtRate(side.value)}</div>
-        <div className="delta muted">bez zmian</div>
-      </td>
-    );
-  }
-
-  const diff = side.value - side.prev!;
-  const pct = (diff / side.prev!) * 100;
-  const dir = diff > 0 ? "up" : "down";
-  const sign = diff > 0 ? "+" : "";
+  const { dir } = changeOf(side);
   return (
-    <td
-      className={`cell ${dir}`}
-      title={`Poprzednio: ${fmtRate(side.prev)} · zmiana: ${fmtTime(side.changedAt)}`}
-    >
-      <div className="rate">
-        {dir === "up" ? "▲" : "▼"} {fmtRate(side.value)}
-      </div>
-      <div className="delta">
-        {sign}
-        {fmtDiff(diff)} ({sign}
-        {fmtPct(pct)}%)
-      </div>
+    <td className={`cell${dir ? ` ${dir}` : ""}`} title={changeTitle(side)}>
+      <RateValue side={side} />
     </td>
+  );
+}
+
+function RateBox({ label, side }: { label: string; side: RateSide | undefined }) {
+  const dir = side ? changeOf(side).dir : null;
+  return (
+    <div className={`rateBox${dir ? ` ${dir}` : ""}`} title={side ? changeTitle(side) : undefined}>
+      <div className="rateLabel">{label}</div>
+      {side && side.value != null ? <RateValue side={side} /> : <div className="rate muted">—</div>}
+    </div>
   );
 }
 
@@ -196,7 +208,7 @@ export default function Dashboard({
           <tbody>
             {rows.map((row) => (
               <tr key={row.symbol}>
-                <td className="stick">
+                <td className="stick" title={row.name}>
                   <Link
                     href={`/waluta/${encodeURIComponent(row.symbol)}`}
                     className="currency"
@@ -205,10 +217,7 @@ export default function Dashboard({
                     onClick={hidePreview}
                   >
                     <Flag symbol={row.symbol} />
-                    <span>
-                      <span className="sym">{row.symbol}</span>
-                      <span className="muted small currencyName">{row.name}</span>
-                    </span>
+                    <span className="sym">{row.symbol}</span>
                   </Link>
                 </td>
                 {sources.map((src) => [
@@ -225,10 +234,37 @@ export default function Dashboard({
           </tbody>
         </table>
       </div>
+
+      {/* Telefon: każda waluta jako osobna karta, kantory w dwóch kolumnach */}
+      <div className="cards">
+        {rows.map((row) => (
+          <section key={row.symbol} className="currencyCard">
+            <Link href={`/waluta/${encodeURIComponent(row.symbol)}`} className="currency cardTitle" title={row.name}>
+              <Flag symbol={row.symbol} />
+              <span className="sym">{row.symbol}</span>
+            </Link>
+            <div className="sourceGrid">
+              {sources.map((src) => {
+                const r = row.perSource[src.id];
+                return (
+                  <div key={src.id} className={`sourceBox${r ? "" : " missing"}`}>
+                    <div className="sourceName">{src.name}</div>
+                    <div className="sourceRates">
+                      <RateBox label="Kupuje" side={r?.buy} />
+                      <RateBox label="Sprzedaje" side={r?.sell} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+        {rows.length === 0 && <p className="muted empty">Brak danych.</p>}
+      </div>
       {preview && <HoverPreview anchor={preview} />}
       <p className="muted small foot">
-        ▲ zielony — kurs wzrósł, ▼ czerwony — kurs spadł (względem poprzedniej różnej wartości). Najedź na
-        walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
+        ▲ zielony — kurs wzrósł, ▼ czerwony — kurs spadł (o tyle zł względem poprzedniej różnej wartości).
+        Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
       </p>
     </main>
   );
