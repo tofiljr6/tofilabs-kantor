@@ -88,11 +88,11 @@ export default async function NbpPage() {
                 </Link>
                 <dl>
                   <dt>Średni NBP</dt>
-                  <dd><strong>{fmtRate(r.mid)}</strong></dd>
+                  <dd><strong data-copy={r.mid != null ? fmtRate(r.mid) : undefined}>{fmtRate(r.mid)}</strong></dd>
                   <dt>Dorex kupuje</dt>
-                  <dd>{fmtRate(r.buy)}{r.buy != null && <> ({signed(((r.buy - r.mid) / r.mid) * 100, fmtPct)}%)</>}</dd>
+                  <dd><span data-copy={r.buy != null ? fmtRate(r.buy) : undefined}>{fmtRate(r.buy)}</span>{r.buy != null && <> ({signed(((r.buy - r.mid) / r.mid) * 100, fmtPct)}%)</>}</dd>
                   <dt>Dorex sprzedaje</dt>
-                  <dd>{fmtRate(r.sell)}{r.sell != null && <> ({signed(((r.sell - r.mid) / r.mid) * 100, fmtPct)}%)</>}</dd>
+                  <dd><span data-copy={r.sell != null ? fmtRate(r.sell) : undefined}>{fmtRate(r.sell)}</span>{r.sell != null && <> ({signed(((r.sell - r.mid) / r.mid) * 100, fmtPct)}%)</>}</dd>
                   <dt>Spread</dt>
                   <dd>{sp == null ? "—" : `${fmtPct(sp)}%`}</dd>
                 </dl>
@@ -129,13 +129,13 @@ export default async function NbpPage() {
                         <span className="muted small">{r.name}</span>
                       </Link>
                     </td>
-                    <td className="num"><strong>{fmtRate(r.mid)}</strong></td>
+                    <td className="num" data-copy={r.mid != null ? fmtRate(r.mid) : undefined}><strong>{fmtRate(r.mid)}</strong></td>
                     <td className="num"><DayChange r={r} /></td>
-                    <td className="num sep"><VsMid value={r.buy} mid={r.mid} side="buy" /></td>
-                    <td className="num"><VsMid value={r.sell} mid={r.mid} side="sell" /></td>
+                    <td className="num sep" data-copy={r.buy != null ? fmtRate(r.buy) : undefined}><VsMid value={r.buy} mid={r.mid} side="buy" /></td>
+                    <td className="num" data-copy={r.sell != null ? fmtRate(r.sell) : undefined}><VsMid value={r.sell} mid={r.mid} side="sell" /></td>
                     <td className="num">{sp == null ? <span className="muted">—</span> : `${fmtPct(sp)}%`}</td>
-                    <td className="num sep">{fmtRate(r.bid)}</td>
-                    <td className="num">{fmtRate(r.ask)}</td>
+                    <td className="num sep" data-copy={r.bid != null ? fmtRate(r.bid) : undefined}>{fmtRate(r.bid)}</td>
+                    <td className="num" data-copy={r.ask != null ? fmtRate(r.ask) : undefined}>{fmtRate(r.ask)}</td>
                   </tr>
                 );
               })}
