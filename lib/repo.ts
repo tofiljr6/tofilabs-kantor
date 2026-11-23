@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import { currencyName } from "./currencies";
+import { HOME_SOURCE_ID } from "./home";
 import { db } from "./db";
 import type { Source } from "./sources";
 import type { CurrencyHistory, RatesState, ScrapedRate, SourceSnapshot, StoredRate } from "./types";
@@ -21,6 +22,18 @@ export async function upsertSources(client: PoolClient, sources: Source[]) {
 export async function lastRunAt(): Promise<Date | null> {
   const { rows } = await db().query<{ at: Date | null }>(`SELECT max(started_at) AS at FROM scrape_runs`);
   return rows[0]?.at ?? null;
+}
+
+/**
+ * Waluty, które kantor ma w bazie (historia zapisuje tylko zmiany, więc bierzemy wszystkie
+ * symbole z historii — sprzątanie i tak trzyma ją krótko).
+ */
+export async function lastSymbols(client: PoolClient, sourceId: string): Promise<string[]> {
+  const { rows } = await client.query<{ symbol: string }>(
+    `SELECT DISTINCT symbol FROM rate_history WHERE source_id = $1`,
+    [sourceId],
+  );
+  return rows.map((r) => r.symbol);
 }
 
 /** Zapisuje kursy — nowy wiersz historii tylko dla walut, których kurs się zmienił. Zwraca liczbę zmian. */
@@ -131,6 +144,15 @@ export async function loadState(sources: Source[]): Promise<RatesState> {
       sell: { value: num(r.sell), prev: num(r.prev_sell), changedAt: iso(r.sell_changed_at) },
     });
     ratesBySource.set(r.source_id, list);
+  }
+
+  // Pokazujemy tylko waluty, które prowadzi Dorex (starsze wpisy innych walut mogą jeszcze
+  // leżeć w bazie sprzed tej zasady — usunie je sprzątanie /api/cron/cleanup).
+  const homeSymbols = new Set((ratesBySource.get(HOME_SOURCE_ID) ?? []).map((r) => r.symbol));
+  if (homeSymbols.size > 0) {
+    for (const [id, list] of ratesBySource) {
+      if (id !== HOME_SOURCE_ID) ratesBySource.set(id, list.filter((r) => homeSymbols.has(r.symbol)));
+    }
   }
 
   let updatedAt: Date | null = null;

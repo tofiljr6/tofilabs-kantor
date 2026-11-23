@@ -1,5 +1,6 @@
 import { db } from "./db";
-import { lastRunAt, loadState, logRun, saveRates, upsertSources } from "./repo";
+import { HOME_SOURCE_ID } from "./home";
+import { lastRunAt, lastSymbols, loadState, logRun, saveRates, upsertSources } from "./repo";
 import { SOURCES, type Source } from "./sources";
 import type { RatesState, ScrapedRate } from "./types";
 
@@ -25,6 +26,15 @@ async function fetchSource(src: Source, pages: Map<string, Promise<string>>): Pr
   return rates;
 }
 
+/**
+ * Interesują nas tylko waluty, które prowadzi Dorex — kursy pozostałych walut z innych kantorów
+ * w ogóle nie trafiają do bazy. Zbiór walut bierzemy z bieżącego scrapingu Dorexu, a gdy ten się
+ * nie udał — z ostatnich kursów Dorexu w bazie. Nie znamy żadnych (pusta baza) → zapisujemy wszystko.
+ */
+function onlyHomeCurrencies(rates: ScrapedRate[], home: Set<string>): ScrapedRate[] {
+  return home.size === 0 ? rates : rates.filter((r) => home.has(r.symbol));
+}
+
 let inFlight: Promise<RatesState> | null = null;
 
 export function scrapeAll(): Promise<RatesState> {
@@ -44,11 +54,18 @@ export function scrapeAll(): Promise<RatesState> {
         );
         if (rows[0].locked) {
           await upsertSources(client, SOURCES);
+          const homeResult = results[SOURCES.findIndex((s) => s.id === HOME_SOURCE_ID)];
+          const homeSymbols = new Set(
+            homeResult?.status === "fulfilled"
+              ? homeResult.value.map((r) => r.symbol)
+              : await lastSymbols(client, HOME_SOURCE_ID),
+          );
           for (const [i, src] of SOURCES.entries()) {
             const r = results[i];
             if (r.status === "fulfilled") {
-              const changed = await saveRates(client, src.id, r.value, startedAt);
-              await logRun(client, { sourceId: src.id, startedAt, ok: true, ratesCount: r.value.length, changedCount: changed });
+              const rates = src.id === HOME_SOURCE_ID ? r.value : onlyHomeCurrencies(r.value, homeSymbols);
+              const changed = await saveRates(client, src.id, rates, startedAt);
+              await logRun(client, { sourceId: src.id, startedAt, ok: true, ratesCount: rates.length, changedCount: changed });
             } else {
               const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
               await logRun(client, { sourceId: src.id, startedAt, ok: false, error: msg });
