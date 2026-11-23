@@ -10,7 +10,7 @@ const cache = new Map<string, { at: number; data: CurrencyHistory | null }>();
 async function fetchHistory(symbol: string): Promise<CurrencyHistory | null> {
   const hit = cache.get(symbol);
   if (hit && Date.now() - hit.at < 60_000) return hit.data;
-  const res = await fetch(`/api/history?symbol=${encodeURIComponent(symbol)}&range=24h`);
+  const res = await fetch(`/api/history?symbol=${encodeURIComponent(symbol)}`);
   const data = res.ok ? ((await res.json()) as CurrencyHistory) : null;
   cache.set(symbol, { at: Date.now(), data });
   return data;
@@ -41,7 +41,7 @@ export default function HoverPreview({ anchor }: { anchor: Anchor }) {
   return (
     <div className="preview" style={{ left, top, width: W }}>
       <div className="previewHead">
-        <strong>{anchor.symbol}</strong> <span className="muted small">· ostatnie 24 h · kliknij, by otworzyć</span>
+        <strong>{anchor.symbol}</strong> <span className="muted small">· dziś 7:00–22:00 · kliknij, by otworzyć</span>
         <Legend />
       </div>
       {data === undefined && <p className="muted small">Ładuję…</p>}
@@ -50,7 +50,7 @@ export default function HoverPreview({ anchor }: { anchor: Anchor }) {
         {data?.sources.map((s) => (
           <div key={s.id} className="previewSource">
             <div className="small">{s.name}</div>
-            <HistoryChart points={s.points} from={data.from} to={data.to} height={80} compact legend={false} />
+            <HistoryChart points={s.points} from={data.from} to={data.to} until={data.until} height={80} compact legend={false} />
           </div>
         ))}
       </div>

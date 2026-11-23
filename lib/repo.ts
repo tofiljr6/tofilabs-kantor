@@ -151,13 +151,14 @@ export async function loadState(sources: Source[]): Promise<RatesState> {
 }
 
 /**
- * Historia kursu waluty z ostatnich `hours` godzin dla każdego kantoru.
+ * Historia kursu waluty w oknie [from, to] dla każdego kantoru; dane bierzemy do `until`
+ * (zwykle "teraz", jeśli okno jeszcze trwa).
  * Dokładamy ostatni wpis sprzed okna (przycięty do początku okna), żeby linia
  * zaczynała się na lewej krawędzi wykresu — kurs obowiązywał już wtedy.
  */
-export async function loadHistory(sources: Source[], symbol: string, hours: number): Promise<CurrencyHistory | null> {
-  const to = new Date();
-  const from = new Date(to.getTime() - hours * 3600_000);
+export async function loadHistory(
+  sources: Source[], symbol: string, from: Date, to: Date, until: Date,
+): Promise<CurrencyHistory | null> {
   const { rows } = await db().query<{
     source_id: string; name: string; buy: string | null; sell: string | null; observed_at: Date;
   }>(
@@ -172,7 +173,7 @@ export async function loadHistory(sources: Source[], symbol: string, hours: numb
      FROM rate_history
      WHERE symbol = $1 AND observed_at > $3 AND observed_at <= $2
      ORDER BY source_id, observed_at`,
-    [symbol, to, from],
+    [symbol, until < from ? from : until, from],
   );
   if (rows.length === 0) return null;
 
@@ -181,6 +182,7 @@ export async function loadHistory(sources: Source[], symbol: string, hours: numb
     name: currencyName(symbol, rows[rows.length - 1].name),
     from: from.toISOString(),
     to: to.toISOString(),
+    until: until.toISOString(),
     sources: sources
       .map((s) => ({
         id: s.id,

@@ -49,5 +49,7 @@ export type CurrencyHistory = {
   name: string;
   from: string;
   to: string;
+  /** Do kiedy sięgają dane (teraz albo koniec okna). */
+  until: string;
   sources: SourceHistory[];
 };

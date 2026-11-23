@@ -65,6 +65,10 @@ th.group { text-align: center; border-left: 3px solid var(--separator); font-siz
   line-height: 1.25; padding: 6px 4px; }
 th.group .small { font-size: 10px; font-weight: 400; }
 thead tr:nth-child(2) th { padding: 4px 4px; font-size: 10.5px; }
+table.rates { table-layout: fixed; }
+table.rates col.colCurrency { width: 96px; }
+table.rates col.colRate { width: 74px; }
+th.group { overflow-wrap: anywhere; }
 .stick { position: sticky; left: 0; background: var(--surface); z-index: 1; padding: 5px 8px; }
 thead th.stick { background: var(--head); z-index: 2; }
 .sym { font-weight: 700; font-size: 14px; }
@@ -110,9 +114,9 @@ a:hover { text-decoration: underline; }
 .rateBox .delta { font-size: 10px; white-space: nowrap; }
 
 /* --- Wykres --- */
-:root { --series-1: #2a78d6; --series-2: #eb6834; --grid: #e8eaee; --axis: #6b7280; }
+:root { --series-buy: #2e9e5b; --series-sell: #d24b4b; --grid: #e8eaee; --axis: #6b7280; }
 @media (prefers-color-scheme: dark) {
-  :root { --series-1: #3987e5; --series-2: #d95926; --grid: #262b33; --axis: #9099a6; }
+  :root { --series-buy: #45b072; --series-sell: #dd5f5f; --grid: #262b33; --axis: #9099a6; }
 }
 .chart { position: relative; width: 100%; }
 .plot { position: relative; }
@@ -120,18 +124,18 @@ a:hover { text-decoration: underline; }
 .legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .legendItem { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { display: inline-block; width: 12px; height: 3px; border-radius: 2px; }
-.swatch.s1 { background: var(--series-1); }
-.swatch.s2 { background: var(--series-2); }
+.swatch.buy { background: var(--series-buy); }
+.swatch.sell { background: var(--series-sell); }
 .grid { stroke: var(--grid); stroke-width: 1; }
 .baseline { stroke: var(--border); stroke-width: 1; }
 .axis { fill: var(--axis); font-size: 11px; font-variant-numeric: tabular-nums; }
 .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.line.s1 { stroke: var(--series-1); }
-.line.s2 { stroke: var(--series-2); }
+.line.buy { stroke: var(--series-buy); }
+.line.sell { stroke: var(--series-sell); }
 .crosshair { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
 .dot { stroke: var(--surface); stroke-width: 2; }
-.dot.s1 { fill: var(--series-1); }
-.dot.s2 { fill: var(--series-2); }
+.dot.buy { fill: var(--series-buy); }
+.dot.sell { fill: var(--series-sell); }
 .tooltip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
   border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); min-width: 150px; z-index: 5; }
 .tipTime { color: var(--muted); margin-bottom: 4px; }
@@ -153,6 +157,9 @@ a:hover { text-decoration: underline; }
 .ranges a { padding: 6px 12px; border-radius: 7px; color: var(--muted); font-weight: 600; }
 .ranges a:hover { text-decoration: none; color: var(--text); }
 .ranges a.active { background: var(--accent); color: #fff; }
+.cardGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.cardGrid .card { margin-bottom: 0; }
+@media (max-width: 1000px) { .cardGrid { grid-template-columns: minmax(0, 1fr); } }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; }
 .cardHead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 4px; }
 .card h2 { margin: 0; font-size: 18px; }
@@ -201,13 +208,15 @@ button.danger:hover { background: var(--down-bg); }
 .navLink { font-weight: 600; font-size: 13px; }
 
 /* --- Porównanie z naszym kantorem (Dorex) --- */
-:root { --beat-buy: #16a34a; --beat-sell: #dc2626; --home-bg: #eff6ff; }
-@media (prefers-color-scheme: dark) { :root { --beat-buy: #4ade80; --beat-sell: #f87171; --home-bg: #15223a; } }
-.cell.beatBuy, .rateBox.beatBuy { box-shadow: inset 0 0 0 2px var(--beat-buy); }
-.cell.beatSell, .rateBox.beatSell { box-shadow: inset 0 0 0 2px var(--beat-sell); }
+:root { --beat-buy: #16a34a; --beat-sell: #dc2626; --home-bg: #eff6ff;
+  --frame-buy: #4c9a68; --frame-sell: #c25b5b; }
+@media (prefers-color-scheme: dark) { :root { --beat-buy: #4ade80; --beat-sell: #f87171; --home-bg: #15223a;
+  --frame-buy: #3f9e63; --frame-sell: #c4585a; } }
+.cell.beatBuy, .rateBox.beatBuy { box-shadow: inset 0 0 0 2px var(--frame-buy); }
+.cell.beatSell, .rateBox.beatSell { box-shadow: inset 0 0 0 2px var(--frame-sell); }
 .legendBox { display: inline-block; padding: 0 5px; border-radius: 4px; color: var(--text); }
-.legendBox.beatBuy { box-shadow: inset 0 0 0 2px var(--beat-buy); }
-.legendBox.beatSell { box-shadow: inset 0 0 0 2px var(--beat-sell); }
+.legendBox.beatBuy { box-shadow: inset 0 0 0 2px var(--frame-buy); }
+.legendBox.beatSell { box-shadow: inset 0 0 0 2px var(--frame-sell); }
 th.group.home { background: var(--home-bg); }
 .sourceBox.home { background: var(--home-bg); border-color: var(--accent); }
 .homeTag { display: block; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); }
