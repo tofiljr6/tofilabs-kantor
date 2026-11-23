@@ -12,6 +12,7 @@
   --down: #dc2626;
   --error-bg: #fef2f2;
   --error: #b91c1c;
+  --best: #eab308;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -196,3 +197,8 @@ button.danger { background: transparent; color: var(--down); border: 1px solid v
 button.danger:hover { background: var(--down-bg); }
 .userLabel { color: var(--muted); font-size: 13px; }
 .navLink { font-weight: 600; font-size: 13px; }
+
+/* --- Najlepszy kurs (kantor kupuje najdrożej / sprzedaje najtaniej) --- */
+.cell.best, .rateBox.best { box-shadow: inset 0 0 0 2px var(--best); }
+.rateBox.best { border-radius: 6px; }
+.bestLegend { display: inline-block; padding: 0 5px; border-radius: 4px; box-shadow: inset 0 0 0 2px var(--best); color: var(--text); }

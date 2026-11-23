@@ -39,20 +39,30 @@ function RateValue({ side }: { side: RateSide }) {
 const changeTitle = (side: RateSide) =>
   changeOf(side).dir ? `Poprzednio: ${fmtRate(side.prev)} · zmiana: ${fmtTime(side.changedAt)}` : undefined;
 
-function RateCell({ side }: { side: RateSide | undefined }) {
+/**
+ * Najlepsze kursy dla klienta: kantor KUPUJE najdrożej (najwięcej dostaniesz za walutę)
+ * i SPRZEDAJE najtaniej (najmniej zapłacisz). Tylko gdy jest z czym porównać (≥ 2 kursy).
+ */
+function bestOf(values: (number | null | undefined)[], pick: "max" | "min"): number | null {
+  const v = values.filter((x): x is number => x != null);
+  if (v.length < 2) return null;
+  return pick === "max" ? Math.max(...v) : Math.min(...v);
+}
+
+function RateCell({ side, best }: { side: RateSide | undefined; best: boolean }) {
   if (!side || side.value == null) return <td className="cell muted">—</td>;
   const { dir } = changeOf(side);
   return (
-    <td className={`cell${dir ? ` ${dir}` : ""}`} title={changeTitle(side)}>
+    <td className={`cell${dir ? ` ${dir}` : ""}${best ? " best" : ""}`} title={changeTitle(side)}>
       <RateValue side={side} />
     </td>
   );
 }
 
-function RateBox({ label, side }: { label: string; side: RateSide | undefined }) {
+function RateBox({ label, side, best }: { label: string; side: RateSide | undefined; best: boolean }) {
   const dir = side ? changeOf(side).dir : null;
   return (
-    <div className={`rateBox${dir ? ` ${dir}` : ""}`} title={side ? changeTitle(side) : undefined}>
+    <div className={`rateBox${dir ? ` ${dir}` : ""}${best ? " best" : ""}`} title={side ? changeTitle(side) : undefined}>
       <div className="rateLabel">{label}</div>
       {side && side.value != null ? <RateValue side={side} /> : <div className="rate muted">—</div>}
     </div>
@@ -142,6 +152,14 @@ export default function Dashboard({
     }
     const q = query.trim().toLowerCase();
     return [...bySymbol.values()]
+      .map((row) => {
+        const rates = Object.values(row.perSource);
+        return {
+          ...row,
+          bestBuy: bestOf(rates.map((r) => r.buy.value), "max"),
+          bestSell: bestOf(rates.map((r) => r.sell.value), "min"),
+        };
+      })
       .filter((row) => !q || row.symbol.toLowerCase().includes(q) || row.name.toLowerCase().includes(q));
   }, [sources, query]);
 
@@ -221,8 +239,16 @@ export default function Dashboard({
                   </Link>
                 </td>
                 {sources.map((src) => [
-                  <RateCell key={`${src.id}-b`} side={row.perSource[src.id]?.buy} />,
-                  <RateCell key={`${src.id}-s`} side={row.perSource[src.id]?.sell} />,
+                  <RateCell
+                    key={`${src.id}-b`}
+                    side={row.perSource[src.id]?.buy}
+                    best={row.bestBuy != null && row.perSource[src.id]?.buy.value === row.bestBuy}
+                  />,
+                  <RateCell
+                    key={`${src.id}-s`}
+                    side={row.perSource[src.id]?.sell}
+                    best={row.bestSell != null && row.perSource[src.id]?.sell.value === row.bestSell}
+                  />,
                 ])}
               </tr>
             ))}
@@ -250,8 +276,12 @@ export default function Dashboard({
                   <div key={src.id} className={`sourceBox${r ? "" : " missing"}`}>
                     <div className="sourceName">{src.name}</div>
                     <div className="sourceRates">
-                      <RateBox label="Kupuje" side={r?.buy} />
-                      <RateBox label="Sprzedaje" side={r?.sell} />
+                      <RateBox label="Kupuje" side={r?.buy} best={row.bestBuy != null && r?.buy.value === row.bestBuy} />
+                      <RateBox
+                        label="Sprzedaje"
+                        side={r?.sell}
+                        best={row.bestSell != null && r?.sell.value === row.bestSell}
+                      />
                     </div>
                   </div>
                 );
@@ -264,6 +294,8 @@ export default function Dashboard({
       {preview && <HoverPreview anchor={preview} />}
       <p className="muted small foot">
         ▲ zielony — kurs wzrósł, ▼ czerwony — kurs spadł (o tyle zł względem poprzedniej różnej wartości).
+        <span className="bestLegend">żółta ramka</span> — najlepszy kurs dla tej waluty: kantor kupuje najdrożej
+        lub sprzedaje najtaniej.
         Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
       </p>
     </main>
