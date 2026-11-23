@@ -14,6 +14,46 @@ const fmtTime = (iso: string | null) => fmtDateTime(iso, true);
 const POLL_MS = 30_000;
 
 
+type ChangeWindow = "last" | "5" | "10" | "15" | "30" | "60" | "all";
+const WINDOW_OPTIONS: { value: ChangeWindow; label: string }[] = [
+  { value: "last", label: "od ostatniej aktualizacji" },
+  { value: "5", label: "ostatnie 5 min" },
+  { value: "10", label: "ostatnie 10 min" },
+  { value: "15", label: "ostatnie 15 min" },
+  { value: "30", label: "ostatnie 30 min" },
+  { value: "60", label: "ostatnia 1 godzina" },
+  { value: "all", label: "bez limitu" },
+];
+type Options = { changeWindow: ChangeWindow; showBeat: boolean };
+const DEFAULT_OPTIONS: Options = { changeWindow: "last", showBeat: true };
+const OPTIONS_KEY = "kantor.options.v2";
+
+function loadOptions(): Options {
+  try {
+    const raw = JSON.parse(localStorage.getItem(OPTIONS_KEY) ?? "null");
+    if (raw && typeof raw === "object") {
+      return {
+        changeWindow: WINDOW_OPTIONS.some((o) => o.value === raw.changeWindow) ? raw.changeWindow : DEFAULT_OPTIONS.changeWindow,
+        showBeat: typeof raw.showBeat === "boolean" ? raw.showBeat : DEFAULT_OPTIONS.showBeat,
+      };
+    }
+  } catch {
+    // brak dostępu do localStorage — zostają domyślne
+  }
+  return DEFAULT_OPTIONS;
+}
+
+/** Czy zmiana z `changedAt` mieści się w wybranym oknie czasu. */
+function isFresh(changedAt: string | null, win: ChangeWindow, scrapedAt: string | null, now: number | null): boolean {
+  if (win === "all") return true;
+  if (!changedAt) return false;
+  const at = Date.parse(changedAt);
+  // Kursy z jednego scrapingu mają observed_at = początek scrapingu = scrapedAt kantoru.
+  if (win === "last") return scrapedAt != null && at >= Date.parse(scrapedAt);
+  if (now == null) return false;
+  return now - at <= Number(win) * 60_000;
+}
+
 type Change = { dir: "up" | "down" | null; diff: number };
 
 function changeOf(side: RateSide): Change {
@@ -24,14 +64,18 @@ function changeOf(side: RateSide): Change {
   return { dir: diff > 0 ? "up" : "down", diff };
 }
 
+/** Zmiana do pokolorowania — tylko gdy mieści się w wybranym oknie czasu. */
+const shownDir = (side: RateSide, fresh: boolean) => (fresh ? changeOf(side).dir : null);
+
 /** Kurs + zmiana (kwotowo, bez procentów). Wspólne dla tabeli i kart na telefonie. */
-function RateValue({ side }: { side: RateSide }) {
+function RateValue({ side, fresh }: { side: RateSide; fresh: boolean }) {
   const { dir, diff } = changeOf(side);
+  // Starsza zmiana: bez koloru, wyszarzona (szczegóły w dymku).
   return (
     <>
       <div className="rate">{fmtRate(side.value)}</div>
-      <div className={`delta${dir ? "" : " muted"}`}>
-        {dir ? `${dir === "up" ? "▲ +" : "▼ "}${fmtDiff(diff)}` : "bez zmian"}
+      <div className={`delta${dir && fresh ? "" : " muted"}`}>
+        {dir ? `${dir === "up" ? "▲ +" : "▼ "}${fmtDiff(diff)}` : "–"}
       </div>
     </>
   );
@@ -64,25 +108,27 @@ const beatTitle = (beat: Beat, home: StoredRate | undefined) =>
 
 const joinTitle = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(" · ") || undefined;
 
-function RateCell({ side, beat, beatInfo }: { side: RateSide | undefined; beat: Beat; beatInfo?: string }) {
+type CellProps = { side: RateSide | undefined; fresh: boolean; beat: Beat; beatInfo?: string };
+
+function RateCell({ side, fresh, beat, beatInfo }: CellProps) {
   if (!side || side.value == null) return <td className="cell muted">—</td>;
-  const { dir } = changeOf(side);
+  const dir = shownDir(side, fresh);
   return (
     <td className={`cell${dir ? ` ${dir}` : ""}${beat ? ` ${beat}` : ""}`} title={joinTitle(beatInfo, changeTitle(side))}>
-      <RateValue side={side} />
+      <RateValue side={side} fresh={fresh} />
     </td>
   );
 }
 
-function RateBox({ label, side, beat, beatInfo }: { label: string; side: RateSide | undefined; beat: Beat; beatInfo?: string }) {
-  const dir = side ? changeOf(side).dir : null;
+function RateBox({ label, side, fresh, beat, beatInfo }: CellProps & { label: string }) {
+  const dir = side ? shownDir(side, fresh) : null;
   return (
     <div
       className={`rateBox${dir ? ` ${dir}` : ""}${beat ? ` ${beat}` : ""}`}
       title={joinTitle(beatInfo, side ? changeTitle(side) : undefined)}
     >
       <div className="rateLabel">{label}</div>
-      {side && side.value != null ? <RateValue side={side} /> : <div className="rate muted">—</div>}
+      {side && side.value != null ? <RateValue side={side} fresh={fresh} /> : <div className="rate muted">—</div>}
     </div>
   );
 }
@@ -101,6 +147,44 @@ export default function Dashboard({
   const [query, setQuery] = useState("");
   const [now, setNow] = useState<number | null>(null); // tylko w przeglądarce
   const [preview, setPreview] = useState<Anchor | null>(null);
+  const [options, setOptions] = useState<Options>(DEFAULT_OPTIONS);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  // Numer kolumny (1-based, jak w :nth-child) pod kursorem — podświetlamy całą kolumnę.
+  const [hoverCol, setHoverCol] = useState<number | null>(null);
+  const trackColumn = (e: React.MouseEvent<HTMLTableElement>) => {
+    const cell = (e.target as HTMLElement).closest("td");
+    const col = cell && cell.cellIndex > 0 && cell.colSpan === 1 ? cell.cellIndex + 1 : null;
+    setHoverCol((prev) => (prev === col ? prev : col));
+  };
+
+  useEffect(() => setOptions(loadOptions()), []);
+  const updateOptions = (patch: Partial<Options>) =>
+    setOptions((prev) => {
+      const next = { ...prev, ...patch };
+      try {
+        localStorage.setItem(OPTIONS_KEY, JSON.stringify(next));
+      } catch {
+        // nie zapisze się między wizytami — trudno
+      }
+      return next;
+    });
+
+  // Zamknij panel opcji po kliknięciu poza nim.
+  useEffect(() => {
+    if (!optionsOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) setOptionsOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [optionsOpen]);
+
+  // Ramki porównania z Dorexem — wyłączane w opcjach.
+  const beatFor = (src: string, kind: "buy" | "sell", r: StoredRate | undefined, home: StoredRate | undefined) =>
+    options.showBeat ? beatOf(src, kind, r, home) : null;
+  const freshFor = (side: RateSide | undefined, scrapedAt: string | null) =>
+    isFresh(side?.changedAt ?? null, options.changeWindow, scrapedAt, now);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showPreview = (symbol: string, el: HTMLElement) => {
@@ -195,6 +279,34 @@ export default function Dashboard({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          <div className="optionsWrap" ref={optionsRef}>
+            <button className="secondary" onClick={() => setOptionsOpen((o) => !o)} aria-expanded={optionsOpen}>
+              Opcje
+            </button>
+            {optionsOpen && (
+              <div className="optionsPanel">
+                <label>
+                  <span>Pokazuj zmiany kursu</span>
+                  <select
+                    value={options.changeWindow}
+                    onChange={(e) => updateOptions({ changeWindow: e.target.value as ChangeWindow })}
+                  >
+                    {WINDOW_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={options.showBeat}
+                    onChange={(e) => updateOptions({ showBeat: e.target.checked })}
+                  />
+                  <span>Ramki porównania z Dorexem (zielona / czerwona)</span>
+                </label>
+              </div>
+            )}
+          </div>
           <button onClick={() => load(true)} disabled={loading}>
             {loading ? "Pobieram…" : "Odśwież teraz"}
           </button>
@@ -215,7 +327,13 @@ export default function Dashboard({
       ))}
 
       <div className="tableWrap">
-        <table>
+        {hoverCol != null && (
+          <style>{`
+            table.rates tbody td:nth-child(${hoverCol}),
+            table.rates thead tr:nth-child(2) th:nth-child(${hoverCol - 1}) { background-image: linear-gradient(var(--hover), var(--hover)); }
+          `}</style>
+        )}
+        <table className="rates" onMouseOver={trackColumn} onMouseLeave={() => setHoverCol(null)}>
           <thead>
             <tr>
               <th rowSpan={2} className="stick">Waluta</th>
@@ -252,11 +370,11 @@ export default function Dashboard({
                 {sources.map((src) => {
                   const r = row.perSource[src.id];
                   const home = row.perSource[HOME_SOURCE_ID];
-                  const bb = beatOf(src.id, "buy", r, home);
-                  const bs = beatOf(src.id, "sell", r, home);
+                  const bb = beatFor(src.id, "buy", r, home);
+                  const bs = beatFor(src.id, "sell", r, home);
                   return [
-                    <RateCell key={`${src.id}-b`} side={r?.buy} beat={bb} beatInfo={beatTitle(bb, home)} />,
-                    <RateCell key={`${src.id}-s`} side={r?.sell} beat={bs} beatInfo={beatTitle(bs, home)} />,
+                    <RateCell key={`${src.id}-b`} side={r?.buy} fresh={freshFor(r?.buy, src.scrapedAt)} beat={bb} beatInfo={beatTitle(bb, home)} />,
+                    <RateCell key={`${src.id}-s`} side={r?.sell} fresh={freshFor(r?.sell, src.scrapedAt)} beat={bs} beatInfo={beatTitle(bs, home)} />,
                   ];
                 })}
               </tr>
@@ -282,8 +400,8 @@ export default function Dashboard({
               {sources.map((src) => {
                 const r = row.perSource[src.id];
                 const home = row.perSource[HOME_SOURCE_ID];
-                const bb = beatOf(src.id, "buy", r, home);
-                const bs = beatOf(src.id, "sell", r, home);
+                const bb = beatFor(src.id, "buy", r, home);
+                const bs = beatFor(src.id, "sell", r, home);
                 const isHome = src.id === HOME_SOURCE_ID;
                 return (
                   <div key={src.id} className={`sourceBox${r ? "" : " missing"}${isHome ? " home" : ""}`}>
@@ -292,8 +410,8 @@ export default function Dashboard({
                       {isHome && <span className="homeTag">mój kantor</span>}
                     </div>
                     <div className="sourceRates">
-                      <RateBox label="Kupuje" side={r?.buy} beat={bb} beatInfo={beatTitle(bb, home)} />
-                      <RateBox label="Sprzedaje" side={r?.sell} beat={bs} beatInfo={beatTitle(bs, home)} />
+                      <RateBox label="Kupuje" side={r?.buy} fresh={freshFor(r?.buy, src.scrapedAt)} beat={bb} beatInfo={beatTitle(bb, home)} />
+                      <RateBox label="Sprzedaje" side={r?.sell} fresh={freshFor(r?.sell, src.scrapedAt)} beat={bs} beatInfo={beatTitle(bs, home)} />
                     </div>
                   </div>
                 );
@@ -305,9 +423,14 @@ export default function Dashboard({
       </div>
       {preview && <HoverPreview anchor={preview} />}
       <p className="muted small foot">
-        ▲ zielony — kurs wzrósł, ▼ czerwony — kurs spadł (o tyle zł względem poprzedniej różnej wartości).
-        Porównanie z Dorexem: <span className="legendBox beatBuy">zielona ramka</span> — kupuje taniej niż my,{" "}
-        <span className="legendBox beatSell">czerwona ramka</span> — sprzedaje drożej niż my.
+        ▲ zielony — kurs wzrósł, ▼ czerwony — kurs spadł (o tyle zł względem poprzedniej różnej wartości;
+        kolorem: {WINDOW_OPTIONS.find((o) => o.value === options.changeWindow)?.label}).
+        {options.showBeat && (
+          <>
+            {" "}Porównanie z Dorexem: <span className="legendBox beatBuy">zielona ramka</span> — kupuje taniej niż my,{" "}
+            <span className="legendBox beatSell">czerwona ramka</span> — sprzedaje drożej niż my.
+          </>
+        )}
         Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
       </p>
     </main>
