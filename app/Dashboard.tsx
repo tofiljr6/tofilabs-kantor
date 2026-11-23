@@ -8,6 +8,7 @@ import { logout } from "./login/actions";
 import { fmtDateTime, fmtDiff, fmtRate } from "@/lib/format";
 import { HOME_SOURCE_ID } from "@/lib/home";
 import type { CurrentUser } from "@/lib/session";
+import { applyTheme, currentTheme, type Theme } from "@/lib/theme";
 import type { RateSide, RatesState, StoredRate } from "@/lib/types";
 
 const fmtTime = (iso: string | null) => fmtDateTime(iso, true);
@@ -24,8 +25,8 @@ const WINDOW_OPTIONS: { value: ChangeWindow; label: string }[] = [
   { value: "60", label: "ostatnia 1 godzina" },
   { value: "all", label: "bez limitu" },
 ];
-type Options = { changeWindow: ChangeWindow; showBeat: boolean };
-const DEFAULT_OPTIONS: Options = { changeWindow: "last", showBeat: true };
+type Options = { changeWindow: ChangeWindow; showBeat: boolean; showRank: boolean };
+const DEFAULT_OPTIONS: Options = { changeWindow: "last", showBeat: true, showRank: true };
 const OPTIONS_KEY = "kantor.options.v2";
 
 function loadOptions(): Options {
@@ -35,6 +36,7 @@ function loadOptions(): Options {
       return {
         changeWindow: WINDOW_OPTIONS.some((o) => o.value === raw.changeWindow) ? raw.changeWindow : DEFAULT_OPTIONS.changeWindow,
         showBeat: typeof raw.showBeat === "boolean" ? raw.showBeat : DEFAULT_OPTIONS.showBeat,
+        showRank: typeof raw.showRank === "boolean" ? raw.showRank : DEFAULT_OPTIONS.showRank,
       };
     }
   } catch {
@@ -106,7 +108,50 @@ const beatTitle = (beat: Beat, home: StoredRate | undefined) =>
       ? `Sprzedaje drożej niż Dorex (${fmtRate(home?.sell.value)})`
       : undefined;
 
-const joinTitle = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(" · ") || undefined;
+/**
+ * Miejsce Dorexu wśród wszystkich kantorów, które mają kurs tej waluty (Dorex wliczony).
+ * Kupno: wyżej = lepiej dla klienta; sprzedaż: niżej = lepiej. Remis = to samo miejsce
+ * (dwa kantory ex aequo na 4. miejscu → oba 4., następny 6.).
+ */
+type Rank = { place: number; of: number; best: number };
+
+function rankOf(kind: "buy" | "sell", perSource: Record<string, StoredRate>): Rank | null {
+  const mine = perSource[HOME_SOURCE_ID]?.[kind].value;
+  if (mine == null) return null;
+  const values = Object.values(perSource)
+    .map((r) => r[kind].value)
+    .filter((v): v is number => v != null);
+  const better = values.filter((v) => (kind === "buy" ? v > mine : v < mine)).length;
+  const best = kind === "buy" ? Math.max(...values) : Math.min(...values);
+  return { place: better + 1, of: values.length, best };
+}
+
+const MEDALS = ["gold", "silver", "bronze"];
+
+function RankLine({ label, kind, rank }: { label: string; kind: "buy" | "sell"; rank: Rank | null }) {
+  if (!rank) {
+    return (
+      <div className="rankLine muted">
+        <span className="rankLabel">{label}</span>—
+      </div>
+    );
+  }
+  const medal = MEDALS[rank.place - 1];
+  const what = kind === "buy" ? "kupna" : "sprzedaży";
+  const title =
+    rank.place === 1
+      ? `Dorex ma najlepszy kurs ${what} (${rank.place}. miejsce z ${rank.of})`
+      : `Dorex: ${rank.place}. miejsce z ${rank.of} w ${kind === "buy" ? "kupnie" : "sprzedaży"} · najlepszy kurs ${what}: ${fmtRate(rank.best)}`;
+  return (
+    <div className="rankLine" title={title}>
+      <span className="rankLabel">{label}</span>
+      <span className={`medal${medal ? ` ${medal}` : ""}`}>{rank.place}</span>
+      <span className="rankOf">/{rank.of}</span>
+    </div>
+  );
+}
+
+const joinTitle =(...parts: (string | undefined)[]) => parts.filter(Boolean).join(" · ") || undefined;
 
 type CellProps = { side: RateSide | undefined; fresh: boolean; beat: Beat; beatInfo?: string };
 
@@ -153,13 +198,23 @@ export default function Dashboard({
   const menuRef = useRef<HTMLDivElement>(null);
   // Numer kolumny (1-based, jak w :nth-child) pod kursorem — podświetlamy całą kolumnę.
   const [hoverCol, setHoverCol] = useState<number | null>(null);
+  // Kolumny przed kursami: (ranking Dorexu) + waluta.
+  const lead = options.showRank ? 2 : 1;
   const trackColumn = (e: React.MouseEvent<HTMLTableElement>) => {
     const cell = (e.target as HTMLElement).closest("td");
-    const col = cell && cell.cellIndex > 0 && cell.colSpan === 1 ? cell.cellIndex + 1 : null;
+    const col = cell && cell.cellIndex >= lead && cell.colSpan === 1 ? cell.cellIndex + 1 : null;
     setHoverCol((prev) => (prev === col ? prev : col));
   };
 
-  useEffect(() => setOptions(loadOptions()), []);
+  const [theme, setTheme] = useState<Theme>("dark");
+  useEffect(() => {
+    setOptions(loadOptions());
+    setTheme(currentTheme());
+  }, []);
+  const changeTheme = (t: Theme) => {
+    applyTheme(t);
+    setTheme(t);
+  };
   const updateOptions = (patch: Partial<Options>) =>
     setOptions((prev) => {
       const next = { ...prev, ...patch };
@@ -288,6 +343,23 @@ export default function Dashboard({
             </button>
             {optionsOpen && (
               <div className="optionsPanel">
+                <div className="optionGroup">
+                  <span>Motyw</span>
+                  <div className="segmented" role="radiogroup" aria-label="Motyw">
+                    {([["dark", "Ciemny"], ["light", "Jasny"]] as const).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={theme === value}
+                        className={theme === value ? "active" : undefined}
+                        onClick={() => changeTheme(value)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label>
                   <span>Pokazuj zmiany kursu</span>
                   <select
@@ -306,6 +378,14 @@ export default function Dashboard({
                     onChange={(e) => updateOptions({ showBeat: e.target.checked })}
                   />
                   <span>Ramki porównania z Dorexem (zielona / czerwona)</span>
+                </label>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={options.showRank}
+                    onChange={(e) => updateOptions({ showRank: e.target.checked })}
+                  />
+                  <span>Ranking Dorexu (miejsce w kupnie i sprzedaży)</span>
                 </label>
               </div>
             )}
@@ -354,17 +434,27 @@ export default function Dashboard({
         {hoverCol != null && (
           <style>{`
             table.rates tbody td:nth-child(${hoverCol}),
-            table.rates thead tr:nth-child(2) th:nth-child(${hoverCol - 1}) { background-image: linear-gradient(var(--hover), var(--hover)); }
+            table.rates thead tr:nth-child(2) th:nth-child(${hoverCol - lead}) { background-image: linear-gradient(var(--hover), var(--hover)); }
           `}</style>
         )}
-        <table className="rates" onMouseOver={trackColumn} onMouseLeave={() => setHoverCol(null)}>
+        <table
+          className={`rates${options.showRank ? " withRank" : ""}`}
+          onMouseOver={trackColumn}
+          onMouseLeave={() => setHoverCol(null)}
+        >
           <colgroup>
+            {options.showRank && <col className="colRank" />}
             <col className="colCurrency" />
             {sources.map((src) => [<col key={`${src.id}-b`} className="colRate" />, <col key={`${src.id}-s`} className="colRate" />])}
           </colgroup>
           <thead>
             <tr>
-              <th rowSpan={2} className="stick">Waluta</th>
+              {options.showRank && (
+                <th rowSpan={2} className="stick rankHead" title="Miejsce Dorexu wśród wszystkich kantorów (kupno / sprzedaż)">
+                  Ranking<span className="homeTag">Dorexu</span>
+                </th>
+              )}
+              <th rowSpan={2} className="stick stickCur">Waluta</th>
               {sources.map((src) => (
                 <th key={src.id} colSpan={2} className={`group${src.id === HOME_SOURCE_ID ? " home" : ""}`}>
                   <a href={src.url} target="_blank" rel="noreferrer">{src.name}</a>
@@ -383,7 +473,13 @@ export default function Dashboard({
           <tbody>
             {rows.map((row) => (
               <tr key={row.symbol}>
-                <td className="stick" title={row.name}>
+                {options.showRank && (
+                  <td className="stick rankCell">
+                    <RankLine label="Kup." kind="buy" rank={rankOf("buy", row.perSource)} />
+                    <RankLine label="Sprz." kind="sell" rank={rankOf("sell", row.perSource)} />
+                  </td>
+                )}
+                <td className="stick stickCur" title={row.name}>
                   <Link
                     href={`/waluta/${encodeURIComponent(row.symbol)}`}
                     className="currency"
@@ -409,7 +505,7 @@ export default function Dashboard({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={1 + sources.length * 2} className="muted empty">Brak danych.</td>
+                <td colSpan={lead + sources.length * 2} className="muted empty">Brak danych.</td>
               </tr>
             )}
           </tbody>
@@ -424,6 +520,12 @@ export default function Dashboard({
               <Flag symbol={row.symbol} />
               <span className="sym">{row.symbol}</span>
             </Link>
+            {options.showRank && (
+              <div className="cardRank">
+                <RankLine label="Kup." kind="buy" rank={rankOf("buy", row.perSource)} />
+                <RankLine label="Sprz." kind="sell" rank={rankOf("sell", row.perSource)} />
+              </div>
+            )}
             <div className="sourceGrid">
               {sources.map((src) => {
                 const r = row.perSource[src.id];
@@ -460,7 +562,15 @@ export default function Dashboard({
             <span className="legendBox beatSell">czerwona ramka</span> — sprzedaje drożej niż my.
           </>
         )}
-        Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
+        {options.showRank && (
+          <>
+            {" "}Ranking Dorexu: miejsce wśród wszystkich kantorów z kursem tej waluty (kupno — kto płaci najwięcej,
+            sprzedaż — kto bierze najmniej; remis = to samo miejsce),{" "}
+            <span className="medal gold">1</span> <span className="medal silver">2</span>{" "}
+            <span className="medal bronze">3</span>.
+          </>
+        )}
+        {" "}Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
       </p>
     </main>
   );
