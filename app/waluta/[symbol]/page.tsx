@@ -71,12 +71,12 @@ export default async function CurrencyPage({ params }: { params: Promise<{ symbo
               <div className="stats">
                 <div>
                   <span className="muted small">Kupuje teraz</span>
-                  <strong>{fmtRate(buy.last)}</strong>
+                  <strong data-copy={buy.last != null ? fmtRate(buy.last) : undefined}>{fmtRate(buy.last)}</strong>
                   <span className="small"><Delta cur={buy.last} prev={buy.first} /></span>
                 </div>
                 <div>
                   <span className="muted small">Sprzedaje teraz</span>
-                  <strong>{fmtRate(sell.last)}</strong>
+                  <strong data-copy={sell.last != null ? fmtRate(sell.last) : undefined}>{fmtRate(sell.last)}</strong>
                   <span className="small"><Delta cur={sell.last} prev={sell.first} /></span>
                 </div>
               </div>
@@ -104,9 +104,9 @@ export default async function CurrencyPage({ params }: { params: Promise<{ symbo
                     {changes.map(({ p, prev }) => (
                       <tr key={p.t}>
                         <td>{fmtTime(p.t)}</td>
-                        <td className="num">{fmtRate(p.buy)}</td>
+                        <td className="num" data-copy={p.buy != null ? fmtRate(p.buy) : undefined}>{fmtRate(p.buy)}</td>
                         <td className="num"><Delta cur={p.buy} prev={prev?.buy ?? null} /></td>
-                        <td className="num">{fmtRate(p.sell)}</td>
+                        <td className="num" data-copy={p.sell != null ? fmtRate(p.sell) : undefined}>{fmtRate(p.sell)}</td>
                         <td className="num"><Delta cur={p.sell} prev={prev?.sell ?? null} /></td>
                       </tr>
                     ))}

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "flag-icons/css/flag-icons.min.css";
 import "./globals.css";
 import { THEME_SCRIPT } from "@/lib/theme";
+import CopyOnClick from "@/components/CopyOnClick";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
+        <CopyOnClick />
       </body>
     </html>
   );

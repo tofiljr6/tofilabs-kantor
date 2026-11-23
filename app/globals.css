@@ -22,7 +22,7 @@
 }
 /* Tabela kursów (i karty na telefonie): czarne tło, pomarańczowe akcenty Dorexu.
    Kolory zmian (zielony/czerwony) i ramek porównania zostają bez zmian. */
-.tableWrap, .cards, .rankWrap {
+.tableWrap, .cards {
   --surface: #0a0a0a;
   --text: #ececec;
   --muted: #8c8c8c;
@@ -328,19 +328,6 @@ table.nbp tr.major td { font-weight: 500; }
 /* Ostry wygląd: bez zaokrągleń (także w natywnych kontrolkach przeglądarki). */
 input, select, textarea, button { border-radius: 0; }
 
-/* --- Ranking Dorexu (osobna tabela po prawej, medale) --- */
-:root { --medal-gold: #f5b301; --medal-silver: #c3c9d0; --medal-bronze: #c9793a; }
-.rankLine { display: flex; align-items: center; gap: 4px; font-size: 11px; line-height: 19px; white-space: nowrap; }
-.rankLabel { width: 30px; font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
-.medal { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%;
-  font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums; background: var(--head); color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--border); }
-.medal.gold { background: var(--medal-gold); color: #3a2800; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
-.medal.silver { background: var(--medal-silver); color: #24282d; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
-.medal.bronze { background: var(--medal-bronze); color: #2b1505; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
-.rankOf { color: var(--muted); font-variant-numeric: tabular-nums; }
-.foot .medal { width: 15px; height: 15px; font-size: 9.5px; vertical-align: -2px; }
-.cardRank { display: flex; gap: 18px; margin: -2px 2px 8px; }
 
 /* --- Jasny motyw (Opcje → Motyw; <html data-theme="light">) --- */
 :root[data-theme="light"] {
@@ -365,7 +352,7 @@ input, select, textarea, button { border-radius: 0; }
   --series-buy: #2e9e5b; --series-sell: #d24b4b; --grid: #e8e8e8; --axis: #6b6b6b;
   --beat-buy: #16a34a; --beat-sell: #dc2626; --frame-buy: #4c9a68; --frame-sell: #c25b5b;
 }
-:root[data-theme="light"] .tableWrap, :root[data-theme="light"] .cards, :root[data-theme="light"] .rankWrap {
+:root[data-theme="light"] .tableWrap, :root[data-theme="light"] .cards {
   --surface: #ffffff;
   --text: #1a1a1a;
   --muted: #6b6b6b;
@@ -386,19 +373,20 @@ input, select, textarea, button { border-radius: 0; }
 .segmented button:hover:not(.active) { background: var(--accent-soft); color: var(--text); }
 .segmented button.active { background: var(--accent); color: var(--on-accent); }
 
-/* --- Dashboard na całą szerokość; ranking jako osobna tabela po prawej, z wyraźnym odstępem --- */
+/* --- Dashboard na całą szerokość --- */
 main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
-.ratesLayout { display: flex; align-items: flex-start; gap: 40px; }
-.ratesLayout > .tableWrap { flex: 1 1 auto; min-width: 0; }
-.rankWrap { flex: 0 0 auto; background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
-table.rankTable { width: auto; }
-table.rankTable th { text-align: center; }
-table.rankTable thead tr:first-child th { font-size: 12px; color: var(--text); line-height: 1.25; padding: 6px 10px; }
-table.rankTable td { padding: 0 10px; vertical-align: middle; }
-td.rankSym { font-weight: 700; font-size: 12px; color: var(--muted); }
-td.rankCellBox { text-align: center; white-space: nowrap; font-size: 11px; }
-td.rankCellBox .medal { margin-right: 2px; }
-@media (max-width: 760px) { .rankWrap { display: none; } .ratesLayout { display: block; } }
+
+/* --- Kopiowanie kursu do schowka (klik / tapnięcie w kurs) --- */
+[data-copy] { cursor: copy; -webkit-tap-highlight-color: transparent; }
+[data-copy]:active { opacity: .7; }
+[data-copy].copied { animation: copiedFlash .7s ease-out; }
+@keyframes copiedFlash { from { box-shadow: inset 0 0 0 2px var(--accent, #3b82f6); } to { box-shadow: inset 0 0 0 2px transparent; } }
+.copyToast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: 1000; padding: 8px 14px; border-radius: 8px; font-size: 13px; white-space: nowrap; pointer-events: none;
+  background: var(--text); color: var(--bg); box-shadow: 0 4px 16px rgba(0,0,0,.3); animation: toastIn .15s ease-out; }
+.copyToast.fail { background: var(--down); color: #fff; }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { [data-copy].copied, .copyToast { animation: none; } }
 
 /* Migający wykrzyknik przy walucie: Dorex ma najgorszy kurs w kupnie lub sprzedaży */
 .worstDot { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;

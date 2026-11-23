@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Flag from "@/components/Flag";
 import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
@@ -25,8 +25,8 @@ const WINDOW_OPTIONS: { value: ChangeWindow; label: string }[] = [
   { value: "60", label: "ostatnia 1 godzina" },
   { value: "all", label: "bez limitu" },
 ];
-type Options = { changeWindow: ChangeWindow; showBeat: boolean; showRank: boolean };
-const DEFAULT_OPTIONS: Options = { changeWindow: "last", showBeat: true, showRank: true };
+type Options = { changeWindow: ChangeWindow; showBeat: boolean };
+const DEFAULT_OPTIONS: Options = { changeWindow: "last", showBeat: true };
 const OPTIONS_KEY = "kantor.options.v2";
 
 function loadOptions(): Options {
@@ -36,7 +36,6 @@ function loadOptions(): Options {
       return {
         changeWindow: WINDOW_OPTIONS.some((o) => o.value === raw.changeWindow) ? raw.changeWindow : DEFAULT_OPTIONS.changeWindow,
         showBeat: typeof raw.showBeat === "boolean" ? raw.showBeat : DEFAULT_OPTIONS.showBeat,
-        showRank: typeof raw.showRank === "boolean" ? raw.showRank : DEFAULT_OPTIONS.showRank,
       };
     }
   } catch {
@@ -110,24 +109,6 @@ const beatTitle = (beat: Beat, home: StoredRate | undefined) =>
       : undefined;
 
 /**
- * Miejsce Dorexu wśród wszystkich kantorów, które mają kurs tej waluty (Dorex wliczony).
- * Kupno: wyżej = lepiej dla klienta; sprzedaż: niżej = lepiej. Remis = to samo miejsce
- * (dwa kantory ex aequo na 4. miejscu → oba 4., następny 6.).
- */
-type Rank = { place: number; of: number; best: number };
-
-function rankOf(kind: "buy" | "sell", perSource: Record<string, StoredRate>): Rank | null {
-  const mine = perSource[HOME_SOURCE_ID]?.[kind].value;
-  if (mine == null) return null;
-  const values = Object.values(perSource)
-    .map((r) => r[kind].value)
-    .filter((v): v is number => v != null);
-  const better = values.filter((v) => (kind === "buy" ? v > mine : v < mine)).length;
-  const best = kind === "buy" ? Math.max(...values) : Math.min(...values);
-  return { place: better + 1, of: values.length, best };
-}
-
-/**
  * Czy Dorex ma najgorszy kurs dla klienta: nikt nie jest od nas gorszy, a ktoś jest lepszy
  * (remis wszystkich to nie „najgorszy”; remis na ostatnim miejscu — tak).
  */
@@ -150,45 +131,6 @@ function WorstDot({ perSource }: { perSource: Record<string, StoredRate> }) {
   return <span className="worstDot" title={info} aria-label={info} role="img">!</span>;
 }
 
-const MEDALS = ["gold", "silver", "bronze"];
-
-function rankTitle(kind: "buy" | "sell", rank: Rank): string {
-  const what = kind === "buy" ? "kupna" : "sprzedaży";
-  return rank.place === 1
-    ? `Dorex ma najlepszy kurs ${what} (${rank.place}. miejsce z ${rank.of})`
-    : `Dorex: ${rank.place}. miejsce z ${rank.of} w ${kind === "buy" ? "kupnie" : "sprzedaży"} · najlepszy kurs ${what}: ${fmtRate(rank.best)}`;
-}
-
-/** Komórka osobnej tabeli rankingu (komputer): medal + „/liczba kantorów”. */
-function RankCell({ kind, rank }: { kind: "buy" | "sell"; rank: Rank | null }) {
-  if (!rank) return <td className="rankCellBox muted">—</td>;
-  const medal = MEDALS[rank.place - 1];
-  return (
-    <td className="rankCellBox" title={rankTitle(kind, rank)}>
-      <span className={`medal${medal ? ` ${medal}` : ""}`}>{rank.place}</span>
-      <span className="rankOf">/{rank.of}</span>
-    </td>
-  );
-}
-
-function RankLine({ label, kind, rank }: { label: string; kind: "buy" | "sell"; rank: Rank | null }) {
-  if (!rank) {
-    return (
-      <div className="rankLine muted">
-        <span className="rankLabel">{label}</span>—
-      </div>
-    );
-  }
-  const medal = MEDALS[rank.place - 1];
-  return (
-    <div className="rankLine" title={rankTitle(kind, rank)}>
-      <span className="rankLabel">{label}</span>
-      <span className={`medal${medal ? ` ${medal}` : ""}`}>{rank.place}</span>
-      <span className="rankOf">/{rank.of}</span>
-    </div>
-  );
-}
-
 const joinTitle =(...parts: (string | undefined)[]) => parts.filter(Boolean).join(" · ") || undefined;
 
 type CellProps = { side: RateSide | undefined; fresh: boolean; beat: Beat; beatInfo?: string; extra?: string };
@@ -198,7 +140,11 @@ function RateCell({ side, fresh, beat, beatInfo, extra }: CellProps) {
   if (!side || side.value == null) return <td className={`cell muted${x}`}>—</td>;
   const dir = shownDir(side, fresh);
   return (
-    <td className={`cell${dir ? ` ${dir}` : ""}${beat ? ` ${beat}` : ""}${x}`} title={joinTitle(beatInfo, changeTitle(side))}>
+    <td
+      className={`cell${dir ? ` ${dir}` : ""}${beat ? ` ${beat}` : ""}${x}`}
+      title={joinTitle(beatInfo, changeTitle(side), "Kliknij, aby skopiować")}
+      data-copy={fmtRate(side.value)}
+    >
       <RateValue side={side} fresh={fresh} />
     </td>
   );
@@ -210,6 +156,7 @@ function RateBox({ label, side, fresh, beat, beatInfo }: CellProps & { label: st
     <div
       className={`rateBox${dir ? ` ${dir}` : ""}${beat ? ` ${beat}` : ""}`}
       title={joinTitle(beatInfo, side ? changeTitle(side) : undefined)}
+      data-copy={side && side.value != null ? fmtRate(side.value) : undefined}
     >
       <div className="rateLabel">{label}</div>
       {side && side.value != null ? <RateValue side={side} fresh={fresh} /> : <div className="rate muted">—</div>}
@@ -237,7 +184,7 @@ export default function Dashboard({
   const menuRef = useRef<HTMLDivElement>(null);
   // Numer kolumny (1-based, jak w :nth-child) pod kursorem — podświetlamy całą kolumnę.
   const [hoverCol, setHoverCol] = useState<number | null>(null);
-  // Numer wiersza (1-based) pod kursorem — podświetlamy go w tabeli kursów i w rankingu jednocześnie.
+  // Numer wiersza (1-based) pod kursorem — podświetlamy cały wiersz.
   const [hoverRow, setHoverRow] = useState<number | null>(null);
   const rowOf = (e: React.MouseEvent<HTMLTableElement>) => {
     const tr = (e.target as HTMLElement).closest("tbody tr") as HTMLTableRowElement | null;
@@ -247,10 +194,6 @@ export default function Dashboard({
     const cell = (e.target as HTMLElement).closest("td");
     const col = cell && cell.cellIndex > 0 && cell.colSpan === 1 ? cell.cellIndex + 1 : null;
     setHoverCol((prev) => (prev === col ? prev : col));
-    const row = rowOf(e);
-    setHoverRow((prev) => (prev === row ? prev : row));
-  };
-  const trackRow = (e: React.MouseEvent<HTMLTableElement>) => {
     const row = rowOf(e);
     setHoverRow((prev) => (prev === row ? prev : row));
   };
@@ -264,13 +207,9 @@ export default function Dashboard({
       ? [`table.rates tbody td:nth-child(${hoverCol})`, `table.rates thead tr:nth-child(2) th:nth-child(${hoverCol - 1})`]
       : []),
     ...(hoverRow != null
-      ? [`table.rates tbody tr:nth-child(${hoverRow}) > td`, `table.rankTable tbody tr:nth-child(${hoverRow}) > td`]
+      ? [`table.rates tbody tr:nth-child(${hoverRow}) > td`]
       : []),
   ];
-
-  // Ranking to osobna tabela obok — wysokości wierszy kopiujemy z tabeli kursów, żeby się zgadzały.
-  const ratesRef = useRef<HTMLTableElement>(null);
-  const rankRef = useRef<HTMLTableElement>(null);
 
   const [theme, setTheme] = useState<Theme>("dark");
   useEffect(() => {
@@ -379,24 +318,6 @@ export default function Dashboard({
     return [...bySymbol.values()];
   }, [sources]);
 
-  // Wysokości wierszy rankingu = wysokości wierszy tabeli kursów (nagłówek i każdy wiersz waluty).
-  useLayoutEffect(() => {
-    const src = ratesRef.current;
-    const dst = rankRef.current;
-    if (!options.showRank || !src || !dst) return;
-    const sync = () => {
-      const from = [...src.tHead!.rows, ...src.tBodies[0].rows];
-      [...dst.tHead!.rows, ...dst.tBodies[0].rows].forEach((tr, i) => {
-        const h = from[i]?.getBoundingClientRect().height;
-        if (h) tr.style.height = `${h}px`;
-      });
-    };
-    sync();
-    const ro = new ResizeObserver(sync);
-    ro.observe(src);
-    return () => ro.disconnect();
-  }, [options.showRank, rows]);
-
   const errors = sources.filter((s) => s.error);
   // Kantor aktualny = bez błędu i dane nie starsze niż 2 cykle scrapingu.
   const statusOf = (src: (typeof sources)[number]) => {
@@ -463,14 +384,6 @@ export default function Dashboard({
                   />
                   <span>Ramki porównania z Dorexem (zielona / czerwona)</span>
                 </label>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={options.showRank}
-                    onChange={(e) => updateOptions({ showRank: e.target.checked })}
-                  />
-                  <span>Ranking Dorexu (miejsce w kupnie i sprzedaży)</span>
-                </label>
               </div>
             )}
           </div>
@@ -514,12 +427,11 @@ export default function Dashboard({
         </p>
       ))}
 
-      <div className="ratesLayout">
       <div className="tableWrap">
         {hoverSelectors.length > 0 && (
           <style>{`${hoverSelectors.join(",\n")} { background-image: linear-gradient(var(--hover), var(--hover)); }`}</style>
         )}
-        <table className="rates" ref={ratesRef} onMouseOver={trackColumn} onMouseLeave={clearHover}>
+        <table className="rates" onMouseOver={trackColumn} onMouseLeave={clearHover}>
           <colgroup>
             <col className="colCurrency" />
             {sources.map((src) => [<col key={`${src.id}-b`} className="colRate" />, <col key={`${src.id}-s`} className="colRate" />])}
@@ -579,36 +491,6 @@ export default function Dashboard({
         </table>
       </div>
 
-      {/* Ranking Dorexu — osobna tabela po prawej, wiersze wyrównane do tabeli kursów */}
-      {options.showRank && rows.length > 0 && (
-        <div className="rankWrap">
-          <table className="rankTable" ref={rankRef} onMouseOver={trackRow} onMouseLeave={clearHover}>
-            <thead>
-              <tr>
-                <th colSpan={3} title="Miejsce Dorexu wśród wszystkich kantorów z kursem tej waluty">
-                  Ranking Dorexu<span className="homeTag">miejsce wśród kantorów</span>
-                </th>
-              </tr>
-              <tr>
-                <th />
-                <th className="num">Kupno</th>
-                <th className="num">Sprzedaż</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.symbol}>
-                  <td className="rankSym">{row.symbol}</td>
-                  <RankCell kind="buy" rank={rankOf("buy", row.perSource)} />
-                  <RankCell kind="sell" rank={rankOf("sell", row.perSource)} />
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      </div>
-
       {/* Telefon: każda waluta jako osobna karta, kantory w dwóch kolumnach */}
       <div className="cards">
         {rows.map((row) => (
@@ -618,12 +500,6 @@ export default function Dashboard({
               <span className="sym">{row.symbol}</span>
               <WorstDot perSource={row.perSource} />
             </Link>
-            {options.showRank && (
-              <div className="cardRank">
-                <RankLine label="Kup." kind="buy" rank={rankOf("buy", row.perSource)} />
-                <RankLine label="Sprz." kind="sell" rank={rankOf("sell", row.perSource)} />
-              </div>
-            )}
             <div className="sourceGrid">
               {sources.map((src) => {
                 const r = row.perSource[src.id];
@@ -660,15 +536,8 @@ export default function Dashboard({
             <span className="legendBox beatSell">czerwona ramka</span> — sprzedaje taniej niż my.
           </>
         )}
-        {options.showRank && (
-          <>
-            {" "}Ranking Dorexu: miejsce wśród wszystkich kantorów z kursem tej waluty (kupno — kto płaci najwięcej,
-            sprzedaż — kto bierze najmniej; remis = to samo miejsce),{" "}
-            <span className="medal gold">1</span> <span className="medal silver">2</span>{" "}
-            <span className="medal bronze">3</span>.
-          </>
-        )}
         {" "}<span className="legendDot">!</span> przy walucie — Dorex ma najgorszy kurs w kupnie lub sprzedaży.
+        {" "}Kliknij w kurs, aby skopiować go do schowka.
         {" "}Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
       </p>
     </main>
