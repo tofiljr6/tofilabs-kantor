@@ -6,6 +6,7 @@ import Flag from "@/components/Flag";
 import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
 import { fmtDateTime, fmtDiff, fmtRate } from "@/lib/format";
+import { HOME_SOURCE_ID } from "@/lib/home";
 import type { CurrentUser } from "@/lib/session";
 import type { RateSide, RatesState, StoredRate } from "@/lib/types";
 
@@ -40,29 +41,46 @@ const changeTitle = (side: RateSide) =>
   changeOf(side).dir ? `Poprzednio: ${fmtRate(side.prev)} · zmiana: ${fmtTime(side.changedAt)}` : undefined;
 
 /**
- * Najlepsze kursy dla klienta: kantor KUPUJE najdrożej (najwięcej dostaniesz za walutę)
- * i SPRZEDAJE najtaniej (najmniej zapłacisz). Tylko gdy jest z czym porównać (≥ 2 kursy).
+ * Porównanie z naszym kantorem (HOME_SOURCE_ID): zielona ramka, gdy konkurencja KUPUJE drożej
+ * niż my, czerwona, gdy SPRZEDAJE taniej. Nasza kolumna nie dostaje ramek.
  */
-function bestOf(values: (number | null | undefined)[], pick: "max" | "min"): number | null {
-  const v = values.filter((x): x is number => x != null);
-  if (v.length < 2) return null;
-  return pick === "max" ? Math.max(...v) : Math.min(...v);
+type Beat = "beatBuy" | "beatSell" | null;
+
+function beatOf(src: string, kind: "buy" | "sell", r: StoredRate | undefined, home: StoredRate | undefined): Beat {
+  if (src === HOME_SOURCE_ID || !r || !home) return null;
+  const mine = home[kind].value;
+  const theirs = r[kind].value;
+  if (mine == null || theirs == null) return null;
+  if (kind === "buy") return theirs > mine ? "beatBuy" : null;
+  return theirs < mine ? "beatSell" : null;
 }
 
-function RateCell({ side, best }: { side: RateSide | undefined; best: boolean }) {
+const beatTitle = (beat: Beat, home: StoredRate | undefined) =>
+  beat === "beatBuy"
+    ? `Kupuje drożej niż Dorex (${fmtRate(home?.buy.value)})`
+    : beat === "beatSell"
+      ? `Sprzedaje taniej niż Dorex (${fmtRate(home?.sell.value)})`
+      : undefined;
+
+const joinTitle = (...parts: (string | undefined)[]) => parts.filter(Boolean).join(" · ") || undefined;
+
+function RateCell({ side, beat, beatInfo }: { side: RateSide | undefined; beat: Beat; beatInfo?: string }) {
   if (!side || side.value == null) return <td className="cell muted">—</td>;
   const { dir } = changeOf(side);
   return (
-    <td className={`cell${dir ? ` ${dir}` : ""}${best ? " best" : ""}`} title={changeTitle(side)}>
+    <td className={`cell${dir ? ` ${dir}` : ""}${beat ? ` ${beat}` : ""}`} title={joinTitle(beatInfo, changeTitle(side))}>
       <RateValue side={side} />
     </td>
   );
 }
 
-function RateBox({ label, side, best }: { label: string; side: RateSide | undefined; best: boolean }) {
+function RateBox({ label, side, beat, beatInfo }: { label: string; side: RateSide | undefined; beat: Beat; beatInfo?: string }) {
   const dir = side ? changeOf(side).dir : null;
   return (
-    <div className={`rateBox${dir ? ` ${dir}` : ""}${best ? " best" : ""}`} title={side ? changeTitle(side) : undefined}>
+    <div
+      className={`rateBox${dir ? ` ${dir}` : ""}${beat ? ` ${beat}` : ""}`}
+      title={joinTitle(beatInfo, side ? changeTitle(side) : undefined)}
+    >
       <div className="rateLabel">{label}</div>
       {side && side.value != null ? <RateValue side={side} /> : <div className="rate muted">—</div>}
     </div>
@@ -152,14 +170,6 @@ export default function Dashboard({
     }
     const q = query.trim().toLowerCase();
     return [...bySymbol.values()]
-      .map((row) => {
-        const rates = Object.values(row.perSource);
-        return {
-          ...row,
-          bestBuy: bestOf(rates.map((r) => r.buy.value), "max"),
-          bestSell: bestOf(rates.map((r) => r.sell.value), "min"),
-        };
-      })
       .filter((row) => !q || row.symbol.toLowerCase().includes(q) || row.name.toLowerCase().includes(q));
   }, [sources, query]);
 
@@ -210,8 +220,9 @@ export default function Dashboard({
             <tr>
               <th rowSpan={2} className="stick">Waluta</th>
               {sources.map((src) => (
-                <th key={src.id} colSpan={2} className="group">
+                <th key={src.id} colSpan={2} className={`group${src.id === HOME_SOURCE_ID ? " home" : ""}`}>
                   <a href={src.url} target="_blank" rel="noreferrer">{src.name}</a>
+                  {src.id === HOME_SOURCE_ID && <span className="homeTag">mój kantor</span>}
                   <div className="muted small">{fmtTime(src.scrapedAt)}</div>
                 </th>
               ))}
@@ -238,18 +249,16 @@ export default function Dashboard({
                     <span className="sym">{row.symbol}</span>
                   </Link>
                 </td>
-                {sources.map((src) => [
-                  <RateCell
-                    key={`${src.id}-b`}
-                    side={row.perSource[src.id]?.buy}
-                    best={row.bestBuy != null && row.perSource[src.id]?.buy.value === row.bestBuy}
-                  />,
-                  <RateCell
-                    key={`${src.id}-s`}
-                    side={row.perSource[src.id]?.sell}
-                    best={row.bestSell != null && row.perSource[src.id]?.sell.value === row.bestSell}
-                  />,
-                ])}
+                {sources.map((src) => {
+                  const r = row.perSource[src.id];
+                  const home = row.perSource[HOME_SOURCE_ID];
+                  const bb = beatOf(src.id, "buy", r, home);
+                  const bs = beatOf(src.id, "sell", r, home);
+                  return [
+                    <RateCell key={`${src.id}-b`} side={r?.buy} beat={bb} beatInfo={beatTitle(bb, home)} />,
+                    <RateCell key={`${src.id}-s`} side={r?.sell} beat={bs} beatInfo={beatTitle(bs, home)} />,
+                  ];
+                })}
               </tr>
             ))}
             {rows.length === 0 && (
@@ -272,16 +281,19 @@ export default function Dashboard({
             <div className="sourceGrid">
               {sources.map((src) => {
                 const r = row.perSource[src.id];
+                const home = row.perSource[HOME_SOURCE_ID];
+                const bb = beatOf(src.id, "buy", r, home);
+                const bs = beatOf(src.id, "sell", r, home);
+                const isHome = src.id === HOME_SOURCE_ID;
                 return (
-                  <div key={src.id} className={`sourceBox${r ? "" : " missing"}`}>
-                    <div className="sourceName">{src.name}</div>
+                  <div key={src.id} className={`sourceBox${r ? "" : " missing"}${isHome ? " home" : ""}`}>
+                    <div className="sourceName">
+                      {src.name}
+                      {isHome && <span className="homeTag">mój kantor</span>}
+                    </div>
                     <div className="sourceRates">
-                      <RateBox label="Kupuje" side={r?.buy} best={row.bestBuy != null && r?.buy.value === row.bestBuy} />
-                      <RateBox
-                        label="Sprzedaje"
-                        side={r?.sell}
-                        best={row.bestSell != null && r?.sell.value === row.bestSell}
-                      />
+                      <RateBox label="Kupuje" side={r?.buy} beat={bb} beatInfo={beatTitle(bb, home)} />
+                      <RateBox label="Sprzedaje" side={r?.sell} beat={bs} beatInfo={beatTitle(bs, home)} />
                     </div>
                   </div>
                 );
@@ -294,8 +306,8 @@ export default function Dashboard({
       {preview && <HoverPreview anchor={preview} />}
       <p className="muted small foot">
         ▲ zielony — kurs wzrósł, ▼ czerwony — kurs spadł (o tyle zł względem poprzedniej różnej wartości).
-        <span className="bestLegend">żółta ramka</span> — najlepszy kurs dla tej waluty: kantor kupuje najdrożej
-        lub sprzedaje najtaniej.
+        Porównanie z Dorexem: <span className="legendBox beatBuy">zielona ramka</span> — kupuje drożej niż my,{" "}
+        <span className="legendBox beatSell">czerwona ramka</span> — sprzedaje taniej niż my.
         Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
       </p>
     </main>
