@@ -22,7 +22,7 @@
 }
 /* Tabela kursów (i karty na telefonie): czarne tło, pomarańczowe akcenty Dorexu.
    Kolory zmian (zielony/czerwony) i ramek porównania zostają bez zmian. */
-.tableWrap, .cards {
+.tableWrap, .cards, .rankWrap {
   --surface: #0a0a0a;
   --text: #ececec;
   --muted: #8c8c8c;
@@ -323,12 +323,8 @@ table.nbp tr.major td { font-weight: 500; }
 /* Ostry wygląd: bez zaokrągleń (także w natywnych kontrolkach przeglądarki). */
 input, select, textarea, button { border-radius: 0; }
 
-/* --- Ranking Dorexu (kolumna przed walutą, medale) --- */
+/* --- Ranking Dorexu (osobna tabela po prawej, medale) --- */
 :root { --medal-gold: #f5b301; --medal-silver: #c3c9d0; --medal-bronze: #c9793a; }
-table.rates col.colRank { width: 92px; }
-table.rates.withRank .stickCur { left: 92px; }
-th.rankHead { text-align: center; font-size: 11px; line-height: 1.25; padding: 5px 4px; }
-td.rankCell { padding: 4px 6px; }
 .rankLine { display: flex; align-items: center; gap: 4px; font-size: 11px; line-height: 19px; white-space: nowrap; }
 .rankLabel { width: 30px; font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
 .medal { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%;
@@ -364,7 +360,7 @@ td.rankCell { padding: 4px 6px; }
   --series-buy: #2e9e5b; --series-sell: #d24b4b; --grid: #e8e8e8; --axis: #6b6b6b;
   --beat-buy: #16a34a; --beat-sell: #dc2626; --frame-buy: #4c9a68; --frame-sell: #c25b5b;
 }
-:root[data-theme="light"] .tableWrap, :root[data-theme="light"] .cards {
+:root[data-theme="light"] .tableWrap, :root[data-theme="light"] .cards, :root[data-theme="light"] .rankWrap {
   --surface: #ffffff;
   --text: #1a1a1a;
   --muted: #6b6b6b;
@@ -384,3 +380,17 @@ td.rankCell { padding: 4px 6px; }
 .segmented button { background: transparent; color: var(--muted); padding: 7px 10px; font-weight: 600; }
 .segmented button:hover:not(.active) { background: var(--accent-soft); color: var(--text); }
 .segmented button.active { background: var(--accent); color: var(--on-accent); }
+
+/* --- Dashboard na całą szerokość; ranking jako osobna tabela po prawej, z wyraźnym odstępem --- */
+main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
+.ratesLayout { display: flex; align-items: flex-start; gap: 40px; }
+.ratesLayout > .tableWrap { flex: 1 1 auto; min-width: 0; }
+.rankWrap { flex: 0 0 auto; background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
+table.rankTable { width: auto; }
+table.rankTable th { text-align: center; }
+table.rankTable thead tr:first-child th { font-size: 12px; color: var(--text); line-height: 1.25; padding: 6px 10px; }
+table.rankTable td { padding: 0 10px; vertical-align: middle; }
+td.rankSym { font-weight: 700; font-size: 12px; color: var(--muted); }
+td.rankCellBox { text-align: center; white-space: nowrap; font-size: 11px; }
+td.rankCellBox .medal { margin-right: 2px; }
+@media (max-width: 760px) { .rankWrap { display: none; } .ratesLayout { display: block; } }

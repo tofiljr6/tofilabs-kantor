@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Flag from "@/components/Flag";
 import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
@@ -128,6 +128,25 @@ function rankOf(kind: "buy" | "sell", perSource: Record<string, StoredRate>): Ra
 
 const MEDALS = ["gold", "silver", "bronze"];
 
+function rankTitle(kind: "buy" | "sell", rank: Rank): string {
+  const what = kind === "buy" ? "kupna" : "sprzedaży";
+  return rank.place === 1
+    ? `Dorex ma najlepszy kurs ${what} (${rank.place}. miejsce z ${rank.of})`
+    : `Dorex: ${rank.place}. miejsce z ${rank.of} w ${kind === "buy" ? "kupnie" : "sprzedaży"} · najlepszy kurs ${what}: ${fmtRate(rank.best)}`;
+}
+
+/** Komórka osobnej tabeli rankingu (komputer): medal + „/liczba kantorów”. */
+function RankCell({ kind, rank }: { kind: "buy" | "sell"; rank: Rank | null }) {
+  if (!rank) return <td className="rankCellBox muted">—</td>;
+  const medal = MEDALS[rank.place - 1];
+  return (
+    <td className="rankCellBox" title={rankTitle(kind, rank)}>
+      <span className={`medal${medal ? ` ${medal}` : ""}`}>{rank.place}</span>
+      <span className="rankOf">/{rank.of}</span>
+    </td>
+  );
+}
+
 function RankLine({ label, kind, rank }: { label: string; kind: "buy" | "sell"; rank: Rank | null }) {
   if (!rank) {
     return (
@@ -137,13 +156,8 @@ function RankLine({ label, kind, rank }: { label: string; kind: "buy" | "sell"; 
     );
   }
   const medal = MEDALS[rank.place - 1];
-  const what = kind === "buy" ? "kupna" : "sprzedaży";
-  const title =
-    rank.place === 1
-      ? `Dorex ma najlepszy kurs ${what} (${rank.place}. miejsce z ${rank.of})`
-      : `Dorex: ${rank.place}. miejsce z ${rank.of} w ${kind === "buy" ? "kupnie" : "sprzedaży"} · najlepszy kurs ${what}: ${fmtRate(rank.best)}`;
   return (
-    <div className="rankLine" title={title}>
+    <div className="rankLine" title={rankTitle(kind, rank)}>
       <span className="rankLabel">{label}</span>
       <span className={`medal${medal ? ` ${medal}` : ""}`}>{rank.place}</span>
       <span className="rankOf">/{rank.of}</span>
@@ -198,13 +212,40 @@ export default function Dashboard({
   const menuRef = useRef<HTMLDivElement>(null);
   // Numer kolumny (1-based, jak w :nth-child) pod kursorem — podświetlamy całą kolumnę.
   const [hoverCol, setHoverCol] = useState<number | null>(null);
-  // Kolumny przed kursami: (ranking Dorexu) + waluta.
-  const lead = options.showRank ? 2 : 1;
+  // Numer wiersza (1-based) pod kursorem — podświetlamy go w tabeli kursów i w rankingu jednocześnie.
+  const [hoverRow, setHoverRow] = useState<number | null>(null);
+  const rowOf = (e: React.MouseEvent<HTMLTableElement>) => {
+    const tr = (e.target as HTMLElement).closest("tbody tr") as HTMLTableRowElement | null;
+    return tr ? tr.sectionRowIndex + 1 : null;
+  };
   const trackColumn = (e: React.MouseEvent<HTMLTableElement>) => {
     const cell = (e.target as HTMLElement).closest("td");
-    const col = cell && cell.cellIndex >= lead && cell.colSpan === 1 ? cell.cellIndex + 1 : null;
+    const col = cell && cell.cellIndex > 0 && cell.colSpan === 1 ? cell.cellIndex + 1 : null;
     setHoverCol((prev) => (prev === col ? prev : col));
+    const row = rowOf(e);
+    setHoverRow((prev) => (prev === row ? prev : row));
   };
+  const trackRow = (e: React.MouseEvent<HTMLTableElement>) => {
+    const row = rowOf(e);
+    setHoverRow((prev) => (prev === row ? prev : row));
+  };
+  const clearHover = () => {
+    setHoverCol(null);
+    setHoverRow(null);
+  };
+
+  const hoverSelectors = [
+    ...(hoverCol != null
+      ? [`table.rates tbody td:nth-child(${hoverCol})`, `table.rates thead tr:nth-child(2) th:nth-child(${hoverCol - 1})`]
+      : []),
+    ...(hoverRow != null
+      ? [`table.rates tbody tr:nth-child(${hoverRow}) > td`, `table.rankTable tbody tr:nth-child(${hoverRow}) > td`]
+      : []),
+  ];
+
+  // Ranking to osobna tabela obok — wysokości wierszy kopiujemy z tabeli kursów, żeby się zgadzały.
+  const ratesRef = useRef<HTMLTableElement>(null);
+  const rankRef = useRef<HTMLTableElement>(null);
 
   const [theme, setTheme] = useState<Theme>("dark");
   useEffect(() => {
@@ -313,6 +354,24 @@ export default function Dashboard({
     return [...bySymbol.values()];
   }, [sources]);
 
+  // Wysokości wierszy rankingu = wysokości wierszy tabeli kursów (nagłówek i każdy wiersz waluty).
+  useLayoutEffect(() => {
+    const src = ratesRef.current;
+    const dst = rankRef.current;
+    if (!options.showRank || !src || !dst) return;
+    const sync = () => {
+      const from = [...src.tHead!.rows, ...src.tBodies[0].rows];
+      [...dst.tHead!.rows, ...dst.tBodies[0].rows].forEach((tr, i) => {
+        const h = from[i]?.getBoundingClientRect().height;
+        if (h) tr.style.height = `${h}px`;
+      });
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(src);
+    return () => ro.disconnect();
+  }, [options.showRank, rows]);
+
   const errors = sources.filter((s) => s.error);
   // Kantor aktualny = bez błędu i dane nie starsze niż 2 cykle scrapingu.
   const statusOf = (src: (typeof sources)[number]) => {
@@ -328,7 +387,7 @@ export default function Dashboard({
   };
 
   return (
-    <main>
+    <main className="wide">
       <header className="topBar">
         <div className="titleBlock">
           <h1>Kursy walut</h1>
@@ -430,31 +489,19 @@ export default function Dashboard({
         </p>
       ))}
 
+      <div className="ratesLayout">
       <div className="tableWrap">
-        {hoverCol != null && (
-          <style>{`
-            table.rates tbody td:nth-child(${hoverCol}),
-            table.rates thead tr:nth-child(2) th:nth-child(${hoverCol - lead}) { background-image: linear-gradient(var(--hover), var(--hover)); }
-          `}</style>
+        {hoverSelectors.length > 0 && (
+          <style>{`${hoverSelectors.join(",\n")} { background-image: linear-gradient(var(--hover), var(--hover)); }`}</style>
         )}
-        <table
-          className={`rates${options.showRank ? " withRank" : ""}`}
-          onMouseOver={trackColumn}
-          onMouseLeave={() => setHoverCol(null)}
-        >
+        <table className="rates" ref={ratesRef} onMouseOver={trackColumn} onMouseLeave={clearHover}>
           <colgroup>
-            {options.showRank && <col className="colRank" />}
             <col className="colCurrency" />
             {sources.map((src) => [<col key={`${src.id}-b`} className="colRate" />, <col key={`${src.id}-s`} className="colRate" />])}
           </colgroup>
           <thead>
             <tr>
-              {options.showRank && (
-                <th rowSpan={2} className="stick rankHead" title="Miejsce Dorexu wśród wszystkich kantorów (kupno / sprzedaż)">
-                  Ranking<span className="homeTag">Dorexu</span>
-                </th>
-              )}
-              <th rowSpan={2} className="stick stickCur">Waluta</th>
+              <th rowSpan={2} className="stick">Waluta</th>
               {sources.map((src) => (
                 <th key={src.id} colSpan={2} className={`group${src.id === HOME_SOURCE_ID ? " home" : ""}`}>
                   <a href={src.url} target="_blank" rel="noreferrer">{src.name}</a>
@@ -473,13 +520,7 @@ export default function Dashboard({
           <tbody>
             {rows.map((row) => (
               <tr key={row.symbol}>
-                {options.showRank && (
-                  <td className="stick rankCell">
-                    <RankLine label="Kup." kind="buy" rank={rankOf("buy", row.perSource)} />
-                    <RankLine label="Sprz." kind="sell" rank={rankOf("sell", row.perSource)} />
-                  </td>
-                )}
-                <td className="stick stickCur" title={row.name}>
+                <td className="stick" title={row.name}>
                   <Link
                     href={`/waluta/${encodeURIComponent(row.symbol)}`}
                     className="currency"
@@ -505,11 +546,41 @@ export default function Dashboard({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={lead + sources.length * 2} className="muted empty">Brak danych.</td>
+                <td colSpan={1 + sources.length * 2} className="muted empty">Brak danych.</td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Ranking Dorexu — osobna tabela po prawej, wiersze wyrównane do tabeli kursów */}
+      {options.showRank && rows.length > 0 && (
+        <div className="rankWrap">
+          <table className="rankTable" ref={rankRef} onMouseOver={trackRow} onMouseLeave={clearHover}>
+            <thead>
+              <tr>
+                <th colSpan={3} title="Miejsce Dorexu wśród wszystkich kantorów z kursem tej waluty">
+                  Ranking Dorexu<span className="homeTag">miejsce wśród kantorów</span>
+                </th>
+              </tr>
+              <tr>
+                <th />
+                <th className="num">Kupno</th>
+                <th className="num">Sprzedaż</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.symbol}>
+                  <td className="rankSym">{row.symbol}</td>
+                  <RankCell kind="buy" rank={rankOf("buy", row.perSource)} />
+                  <RankCell kind="sell" rank={rankOf("sell", row.perSource)} />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       </div>
 
       {/* Telefon: każda waluta jako osobna karta, kantory w dwóch kolumnach */}
