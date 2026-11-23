@@ -63,6 +63,11 @@ thead th.num { text-align: center; }
 td.cell:nth-child(2n), th.groupStart { border-left: 3px solid var(--separator); }
 th.group { text-align: center; border-left: 3px solid var(--separator); font-size: 12px; color: var(--text); white-space: normal;
   line-height: 1.25; padding: 6px 4px; }
+/* Cienka linia między Kupuje a Sprzedaje w obrębie kantoru */
+td.pairSell, th.pairSell { border-left: 1px solid var(--border); }
+/* Mój kantor (Dorex) — grubsze linie po obu stronach grupy */
+table.rates .homeL { border-left: 5px solid var(--accent); }
+table.rates .homeR { border-right: 5px solid var(--accent); }
 th.group .small { font-size: 10px; font-weight: 400; }
 thead tr:nth-child(2) th { padding: 4px 4px; font-size: 10.5px; }
 table.rates { table-layout: fixed; }

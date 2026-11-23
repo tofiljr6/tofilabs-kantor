@@ -168,13 +168,14 @@ function RankLine({ label, kind, rank }: { label: string; kind: "buy" | "sell"; 
 
 const joinTitle =(...parts: (string | undefined)[]) => parts.filter(Boolean).join(" · ") || undefined;
 
-type CellProps = { side: RateSide | undefined; fresh: boolean; beat: Beat; beatInfo?: string };
+type CellProps = { side: RateSide | undefined; fresh: boolean; beat: Beat; beatInfo?: string; extra?: string };
 
-function RateCell({ side, fresh, beat, beatInfo }: CellProps) {
-  if (!side || side.value == null) return <td className="cell muted">—</td>;
+function RateCell({ side, fresh, beat, beatInfo, extra }: CellProps) {
+  const x = extra ? ` ${extra}` : "";
+  if (!side || side.value == null) return <td className={`cell muted${x}`}>—</td>;
   const dir = shownDir(side, fresh);
   return (
-    <td className={`cell${dir ? ` ${dir}` : ""}${beat ? ` ${beat}` : ""}`} title={joinTitle(beatInfo, changeTitle(side))}>
+    <td className={`cell${dir ? ` ${dir}` : ""}${beat ? ` ${beat}` : ""}${x}`} title={joinTitle(beatInfo, changeTitle(side))}>
       <RateValue side={side} fresh={fresh} />
     </td>
   );
@@ -504,7 +505,7 @@ export default function Dashboard({
             <tr>
               <th rowSpan={2} className="stick">Waluta</th>
               {sources.map((src) => (
-                <th key={src.id} colSpan={2} className={`group${src.id === HOME_SOURCE_ID ? " home" : ""}`}>
+                <th key={src.id} colSpan={2} className={`group${src.id === HOME_SOURCE_ID ? " home homeL homeR" : ""}`}>
                   <a href={src.url} target="_blank" rel="noreferrer">{src.name}</a>
                   {src.id === HOME_SOURCE_ID && <span className="homeTag">mój kantor</span>}
                   {statusDot(src)}
@@ -513,8 +514,8 @@ export default function Dashboard({
             </tr>
             <tr>
               {sources.map((src) => [
-                <th key={`${src.id}-b`} className="num groupStart">Kupuje</th>,
-                <th key={`${src.id}-s`} className="num">Sprzedaje</th>,
+                <th key={`${src.id}-b`} className={`num groupStart${src.id === HOME_SOURCE_ID ? " homeL" : ""}`}>Kupuje</th>,
+                <th key={`${src.id}-s`} className={`num pairSell${src.id === HOME_SOURCE_ID ? " homeR" : ""}`}>Sprzedaje</th>,
               ])}
             </tr>
           </thead>
@@ -539,8 +540,8 @@ export default function Dashboard({
                   const bb = beatFor(src.id, "buy", r, home);
                   const bs = beatFor(src.id, "sell", r, home);
                   return [
-                    <RateCell key={`${src.id}-b`} side={r?.buy} fresh={freshFor(r?.buy, src.scrapedAt)} beat={bb} beatInfo={beatTitle(bb, home)} />,
-                    <RateCell key={`${src.id}-s`} side={r?.sell} fresh={freshFor(r?.sell, src.scrapedAt)} beat={bs} beatInfo={beatTitle(bs, home)} />,
+                    <RateCell key={`${src.id}-b`} side={r?.buy} fresh={freshFor(r?.buy, src.scrapedAt)} beat={bb} beatInfo={beatTitle(bb, home)} extra={src.id === HOME_SOURCE_ID ? "homeL" : undefined} />,
+                    <RateCell key={`${src.id}-s`} side={r?.sell} fresh={freshFor(r?.sell, src.scrapedAt)} beat={bs} beatInfo={beatTitle(bs, home)} extra={src.id === HOME_SOURCE_ID ? "pairSell homeR" : "pairSell"} />,
                   ];
                 })}
               </tr>
