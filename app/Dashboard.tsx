@@ -355,6 +355,10 @@ export default function Dashboard({
           `}</style>
         )}
         <table className="rates" onMouseOver={trackColumn} onMouseLeave={() => setHoverCol(null)}>
+          <colgroup>
+            <col className="colCurrency" />
+            {sources.map((src) => [<col key={`${src.id}-b`} className="colRate" />, <col key={`${src.id}-s`} className="colRate" />])}
+          </colgroup>
           <thead>
             <tr>
               <th rowSpan={2} className="stick">Waluta</th>

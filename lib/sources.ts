@@ -48,7 +48,7 @@ export const SOURCES: Source[] = [
   },
   {
     id: "gant-olawska",
-    name: "Kantor Gant — Oławska 5",
+    name: "Kantor Gant",
     url: "https://www.kantorygant.pl/kantor/Wroclaw/Olawska-5",
     parse: parseKantorGant,
   },
@@ -84,7 +84,7 @@ export const SOURCES: Source[] = [
   },
   {
     id: "tavex-olawska",
-    name: "Tavex — Oławska 9",
+    name: "Tavex",
     // officeId=61 = Wrocław, Oławska (bez parametru strona może pokazać inny oddział)
     url: "https://tavex.pl/kantor-wroclaw-kursy-walut/?officeId=61",
     parse: parseTavex,

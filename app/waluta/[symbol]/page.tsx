@@ -2,14 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Flag from "@/components/Flag";
 import HistoryChart from "@/components/HistoryChart";
-import { getHistory, parseRange, RANGES, type RangeKey } from "@/lib/history";
+import { DAY_END_HOUR, DAY_START_HOUR, getHistory } from "@/lib/history";
 import { fmtDateTime, fmtDiff, fmtPct, fmtRate } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 import type { HistoryPoint } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-const RANGE_LABEL: Record<RangeKey, string> = { "24h": "24 godziny", "7d": "7 dni", "30d": "30 dni" };
 
 const fmtTime = (iso: string) => fmtDateTime(iso);
 
@@ -32,18 +30,11 @@ function windowChange(points: HistoryPoint[], key: "buy" | "sell") {
   return { first: points[0]?.[key] ?? null, last: points[points.length - 1]?.[key] ?? null };
 }
 
-export default async function CurrencyPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ symbol: string }>;
-  searchParams: Promise<{ range?: string }>;
-}) {
+export default async function CurrencyPage({ params }: { params: Promise<{ symbol: string }> }) {
   await requireUser();
   const { symbol: raw } = await params;
   const symbol = decodeURIComponent(raw);
-  const range = parseRange((await searchParams).range);
-  const data = await getHistory(symbol, range);
+  const data = await getHistory(symbol);
   if (!data) notFound();
 
   return (
@@ -59,15 +50,10 @@ export default async function CurrencyPage({
             <p className="muted">{data.name}</p>
           </div>
         </div>
-        <nav className="ranges">
-          {(Object.keys(RANGES) as RangeKey[]).map((r) => (
-            <Link key={r} href={`?range=${r}`} className={r === range ? "active" : ""} scroll={false}>
-              {RANGE_LABEL[r]}
-            </Link>
-          ))}
-        </nav>
+        <p className="muted">Dzisiaj, {DAY_START_HOUR}:00–{DAY_END_HOUR}:00</p>
       </header>
 
+      <div className="cardGrid">
       {data.sources.map((src) => {
         const buy = windowChange(src.points, "buy");
         const sell = windowChange(src.points, "sell");
@@ -95,13 +81,13 @@ export default async function CurrencyPage({
                 </div>
               </div>
             </div>
-            <p className="muted small">Zmiana względem kursu sprzed {RANGE_LABEL[range]}.</p>
+            <p className="muted small">Zmiana względem kursu z {DAY_START_HOUR}:00.</p>
 
-            <HistoryChart points={src.points} from={data.from} to={data.to} height={300} />
+            <HistoryChart points={src.points} from={data.from} to={data.to} until={data.until} height={240} />
 
             <h3>Zmiany kursu ({changes.length})</h3>
             {changes.length === 0 ? (
-              <p className="muted">W tym okresie kurs się nie zmienił.</p>
+              <p className="muted">Dzisiaj kurs się nie zmienił.</p>
             ) : (
               <div className="tableWrap">
                 <table>
@@ -131,6 +117,7 @@ export default async function CurrencyPage({
           </section>
         );
       })}
+      </div>
     </main>
   );
 }

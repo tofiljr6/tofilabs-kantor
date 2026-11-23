@@ -8,6 +8,8 @@ type Props = {
   points: HistoryPoint[];
   from: string;
   to: string;
+  /** Do kiedy rysować ostatni kurs (domyślnie `to`). */
+  until?: string;
   height?: number;
   compact?: boolean;
   /** false = legenda rysowana wyżej (np. raz dla kilku wykresów) */
@@ -15,8 +17,8 @@ type Props = {
 };
 
 export const SERIES = [
-  { key: "buy", label: "Kupuje", cls: "s1" },
-  { key: "sell", label: "Sprzedaje", cls: "s2" },
+  { key: "buy", label: "Kupuje", cls: "buy" },
+  { key: "sell", label: "Sprzedaje", cls: "sell" },
 ] as const;
 
 function niceTicks(min: number, max: number, count: number): number[] {
@@ -51,7 +53,7 @@ function valueAt(points: HistoryPoint[], t: number): HistoryPoint | null {
   return cur;
 }
 
-export default function HistoryChart({ points, from, to, height = 260, compact = false, legend = true }: Props) {
+export default function HistoryChart({ points, from, to, until, height = 260, compact = false, legend = true }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
   const [hoverT, setHoverT] = useState<number | null>(null);
@@ -66,6 +68,7 @@ export default function HistoryChart({ points, from, to, height = 260, compact =
 
   const t0 = Date.parse(from);
   const t1 = Date.parse(to);
+  const tEnd = Math.max(t0, Math.min(t1, until ? Date.parse(until) : t1));
   const pad = compact
     ? { top: 8, right: 8, bottom: 20, left: 52 }
     : { top: 12, right: 16, bottom: 28, left: 64 };
@@ -101,7 +104,7 @@ export default function HistoryChart({ points, from, to, height = 260, compact =
       const py = y(v);
       d += prevY == null ? `M${px},${py}` : `H${px}V${py}`;
       prevY = py;
-      if (i === points.length - 1) d += `H${x(t1)}`;
+      if (i === points.length - 1) d += `H${x(tEnd)}`;
     });
     return d;
   };
@@ -116,7 +119,7 @@ export default function HistoryChart({ points, from, to, height = 260, compact =
   const onMove = (e: React.PointerEvent<SVGRectElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const t = t0 + ((e.clientX - rect.left) / rect.width) * (t1 - t0);
-    setHoverT(t >= firstT ? t : null);
+    setHoverT(t >= firstT && t <= tEnd ? t : null);
   };
 
   const tipLeft = hoverT != null ? x(hoverT) : 0;
