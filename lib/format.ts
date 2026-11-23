@@ -31,3 +31,6 @@ export function tzOffset(t: number): number {
   const g = (k: string) => Number(parts.find((p) => p.type === k)!.value);
   return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute"), g("second")) - Math.floor(t / 1000) * 1000;
 }
+
+/** Data z API NBP: "2026-11-23" → "23.11.2026" */
+export const fmtNbpDate = (d: string) => d.split("-").reverse().join(".");

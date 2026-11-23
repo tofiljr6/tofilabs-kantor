@@ -1,38 +1,37 @@
+/* Motyw: zawsze ciemny, w kolorystyce Dorexu (pomarańcz #ff5c00 jak na dorex.com.pl). */
 :root {
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --text: #15181d;
-  --muted: #6b7280;
-  --border: #e3e6ea;
-  --head: #f0f2f5;
-  --accent: #2563eb;
-  --up: #16a34a;
-  --up-bg: #ecfdf3;
-  --down-bg: #fef2f2;
-  --down: #dc2626;
-  --error-bg: #fef2f2;
-  --error: #b91c1c;
-  --hover: rgba(37, 99, 235, 0.10);
-  --separator: #b6bcc6;
+  color-scheme: dark;
+  --bg: #111111;
+  --surface: #1a1a1a;
+  --text: #ececec;
+  --muted: #9a9a9a;
+  --border: #2e2e2e;
+  --head: #222222;
+  --accent: #ff5c00;
+  --accent-hover: #ff7a2e;
+  --accent-soft: rgba(255, 92, 0, 0.14);
+  --on-accent: #ffffff;
+  --up: #4ade80;
+  --up-bg: #0f2a1a;
+  --down-bg: #2e1414;
+  --down: #f87171;
+  --error-bg: #2a1414;
+  --error: #fca5a5;
+  --hover: rgba(255, 92, 0, 0.12);
+  --separator: #4a4a4a;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f1115;
-    --surface: #171a20;
-    --text: #e6e8eb;
-    --muted: #9099a6;
-    --border: #2a2f37;
-    --head: #1d2128;
-    --accent: #60a5fa;
-    --up: #4ade80;
-    --up-bg: #0f2a1a;
-    --down-bg: #2e1414;
-    --down: #f87171;
-    --error-bg: #2a1414;
-    --error: #fca5a5;
-    --hover: rgba(96, 165, 250, 0.14);
-    --separator: #4a525e;
-  }
+/* Tabela kursów (i karty na telefonie): czarne tło, pomarańczowe akcenty Dorexu.
+   Kolory zmian (zielony/czerwony) i ramek porównania zostają bez zmian. */
+.tableWrap, .cards {
+  --surface: #0a0a0a;
+  --text: #ececec;
+  --muted: #8c8c8c;
+  --border: #222222;
+  --head: #161616;
+  --accent: #ff5c00;
+  --hover: rgba(255, 92, 0, 0.10);
+  --separator: #3a3a3a;
+  --home-bg: rgba(255, 92, 0, 0.10);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--text); }
@@ -44,10 +43,11 @@ p { margin: 0; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-button { padding: 8px 14px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; }
+button { padding: 8px 14px; border: 0; background: var(--accent); color: var(--on-accent); font-weight: 600; cursor: pointer; transition: background .15s; }
+button:hover:not(:disabled) { background: var(--accent-hover); }
 button:disabled { opacity: 0.6; cursor: progress; }
-.error { background: var(--error-bg); color: var(--error); padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
-.tableWrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.error { background: var(--error-bg); color: var(--error); padding: 10px 12px; margin-bottom: 12px; }
+.tableWrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
 thead th { background: var(--head); font-weight: 600; font-size: 12px; color: var(--muted); position: sticky; top: 0; }
@@ -78,7 +78,7 @@ a:hover { text-decoration: underline; }
 .foot { margin-top: 10px; }
 
 /* --- Flagi --- */
-.flag { display: inline-block; width: 28px; height: 21px; border-radius: 3px; flex-shrink: 0;
+.flag { display: inline-block; width: 28px; height: 21px; flex-shrink: 0;
   box-shadow: 0 0 0 1px var(--border); background-size: cover; }
 .flag-empty { background: var(--head); }
 .currency { display: flex; align-items: center; gap: 8px; color: var(--text); }
@@ -96,17 +96,17 @@ a:hover { text-decoration: underline; }
   .tableWrap { display: none; }
   .cards { display: flex; flex-direction: column; gap: 12px; }
 }
-.currencyCard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
+.currencyCard { background: var(--surface); border: 1px solid var(--border); padding: 10px; }
 .cardTitle { margin: 2px 2px 8px; }
 .cardTitle .sym { font-size: 16px; }
 .cardTitle .flag { width: 28px; height: 21px; }
 .sourceGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.sourceBox { border: 1px solid var(--border); border-radius: 8px; padding: 6px; min-width: 0; }
+.sourceBox { border: 1px solid var(--border); padding: 6px; min-width: 0; }
 .sourceBox.missing { opacity: .55; }
 .sourceName { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; line-height: 1.25;
   overflow-wrap: anywhere; }
 .sourceRates { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.rateBox { border-radius: 6px; padding: 3px 4px; font-variant-numeric: tabular-nums; min-width: 0; }
+.rateBox { padding: 3px 4px; font-variant-numeric: tabular-nums; min-width: 0; }
 .rateBox.up { color: var(--up); background: var(--up-bg); }
 .rateBox.down { color: var(--down); background: var(--down-bg); }
 .rateLabel { font-size: 9.5px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
@@ -114,16 +114,13 @@ a:hover { text-decoration: underline; }
 .rateBox .delta { font-size: 10px; white-space: nowrap; }
 
 /* --- Wykres --- */
-:root { --series-buy: #2e9e5b; --series-sell: #d24b4b; --grid: #e8eaee; --axis: #6b7280; }
-@media (prefers-color-scheme: dark) {
-  :root { --series-buy: #45b072; --series-sell: #dd5f5f; --grid: #262b33; --axis: #9099a6; }
-}
+:root { --series-buy: #45b072; --series-sell: #dd5f5f; --grid: #2a2a2a; --axis: #9a9a9a; }
 .chart { position: relative; width: 100%; }
 .plot { position: relative; }
 .chart svg { display: block; overflow: visible; }
 .legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .legendItem { display: inline-flex; align-items: center; gap: 6px; }
-.swatch { display: inline-block; width: 12px; height: 3px; border-radius: 2px; }
+.swatch { display: inline-block; width: 12px; height: 3px; }
 .swatch.buy { background: var(--series-buy); }
 .swatch.sell { background: var(--series-sell); }
 .grid { stroke: var(--grid); stroke-width: 1; }
@@ -136,15 +133,13 @@ a:hover { text-decoration: underline; }
 .dot { stroke: var(--surface); stroke-width: 2; }
 .dot.buy { fill: var(--series-buy); }
 .dot.sell { fill: var(--series-sell); }
-.tooltip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); min-width: 150px; z-index: 5; }
+.tooltip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border); padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.12); min-width: 150px; z-index: 5; }
 .tipTime { color: var(--muted); margin-bottom: 4px; }
 .tipRow { display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 8px; }
 .tipRow strong { font-variant-numeric: tabular-nums; }
 
 /* --- Podgląd po najechaniu --- */
-.preview { position: fixed; max-height: calc(100vh - 24px); overflow: hidden; z-index: 50; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.18); }
+.preview { position: fixed; max-height: calc(100vh - 24px); overflow: hidden; z-index: 50; pointer-events: none; background: var(--surface); border: 1px solid var(--border); padding: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.18); }
 .previewHead { margin-bottom: 8px; }
 .previewGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px 14px; }
 .previewSource .small { margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -153,14 +148,14 @@ a:hover { text-decoration: underline; }
 .back { margin-bottom: 12px; }
 .titleRow { display: flex; align-items: center; gap: 14px; }
 .titleRow .flag { width: 48px; height: 36px; }
-.ranges { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
-.ranges a { padding: 6px 12px; border-radius: 7px; color: var(--muted); font-weight: 600; }
+.ranges { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); padding: 4px; }
+.ranges a { padding: 6px 12px; color: var(--muted); font-weight: 600; }
 .ranges a:hover { text-decoration: none; color: var(--text); }
-.ranges a.active { background: var(--accent); color: #fff; }
+.ranges a.active { background: var(--accent); color: var(--on-accent); }
 .cardGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
 .cardGrid .card { margin-bottom: 0; }
 @media (max-width: 1000px) { .cardGrid { grid-template-columns: minmax(0, 1fr); } }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; }
+.card { background: var(--surface); border: 1px solid var(--border); padding: 16px 20px; margin-bottom: 20px; }
 .cardHead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 4px; }
 .card h2 { margin: 0; font-size: 18px; }
 .card h3 { font-size: 14px; margin: 20px 0 8px; }
@@ -168,24 +163,22 @@ a:hover { text-decoration: underline; }
 .stats { display: flex; gap: 28px; }
 .stats > div { display: flex; flex-direction: column; gap: 2px; text-align: right; }
 .stats strong { font-size: 20px; font-variant-numeric: tabular-nums; }
-.card .tableWrap { border-radius: 8px; }
 span.up { color: var(--up); }
 span.down { color: var(--down); }
 
 /* --- Logowanie --- */
 button.secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-button.secondary:hover { color: var(--text); }
+button.secondary:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: transparent; }
 .loginPage { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.loginCard { width: 100%; max-width: 360px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; padding: 28px 24px; box-shadow: 0 12px 32px rgba(0,0,0,.12); }
+.loginCard { width: 100%; max-width: 360px; background: var(--surface); border: 1px solid var(--border); padding: 28px 24px; box-shadow: 0 12px 32px rgba(0,0,0,.12); }
 .loginCard h1 { margin-bottom: 4px; }
 .loginForm { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
 .loginForm label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
-.loginForm input { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+.loginForm input { padding: 10px 12px; border: 1px solid var(--border); background: var(--bg);
   color: var(--text); font-size: 15px; }
 .loginForm input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .loginForm button { padding: 10px 14px; font-size: 15px; }
-.loginError { color: var(--error); background: var(--error-bg); padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+.loginError { color: var(--error); background: var(--error-bg); padding: 8px 10px; font-size: 13px; }
 
 /* --- Użytkownicy --- */
 main.narrow { max-width: 860px; }
@@ -193,28 +186,26 @@ main.narrow h1 { margin-bottom: 6px; }
 main.narrow > p.muted { margin-bottom: 20px; }
 .userForm { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-top: 12px; }
 .userForm label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); flex: 1 1 180px; }
-.userForm input, .inlineForm input { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px;
+.userForm input, .inlineForm input { padding: 9px 11px; border: 1px solid var(--border);
   background: var(--bg); color: var(--text); font-size: 14px; }
 .userForm .formError, .userForm .formOk { flex-basis: 100%; }
-.formError { color: var(--error); background: var(--error-bg); padding: 8px 10px; border-radius: 8px; font-size: 13px; }
-.formOk { color: var(--up); background: var(--up-bg); padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+.formError { color: var(--error); background: var(--error-bg); padding: 8px 10px; font-size: 13px; }
+.formOk { color: var(--up); background: var(--up-bg); padding: 8px 10px; font-size: 13px; }
 .rowActions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
 .inlineForm { display: flex; gap: 6px; align-items: center; }
 .inlineForm input { padding: 6px 9px; font-size: 13px; width: 200px; }
 button.small { padding: 5px 10px; font-size: 12px; }
 button.danger { background: transparent; color: var(--down); border: 1px solid var(--down); }
-button.danger:hover { background: var(--down-bg); }
+button.danger:hover:not(:disabled) { background: var(--down-bg); }
 .userLabel { color: var(--muted); font-size: 13px; }
 .navLink { font-weight: 600; font-size: 13px; }
 
 /* --- Porównanie z naszym kantorem (Dorex) --- */
-:root { --beat-buy: #16a34a; --beat-sell: #dc2626; --home-bg: #eff6ff;
-  --frame-buy: #4c9a68; --frame-sell: #c25b5b; }
-@media (prefers-color-scheme: dark) { :root { --beat-buy: #4ade80; --beat-sell: #f87171; --home-bg: #15223a;
-  --frame-buy: #3f9e63; --frame-sell: #c4585a; } }
+:root { --beat-buy: #4ade80; --beat-sell: #f87171; --home-bg: var(--accent-soft);
+  --frame-buy: #3f9e63; --frame-sell: #c4585a; }
 .cell.beatBuy, .rateBox.beatBuy { box-shadow: inset 0 0 0 2px var(--frame-buy); }
 .cell.beatSell, .rateBox.beatSell { box-shadow: inset 0 0 0 2px var(--frame-sell); }
-.legendBox { display: inline-block; padding: 0 5px; border-radius: 4px; color: var(--text); }
+.legendBox { display: inline-block; padding: 0 5px; color: var(--text); }
 .legendBox.beatBuy { box-shadow: inset 0 0 0 2px var(--frame-buy); }
 .legendBox.beatSell { box-shadow: inset 0 0 0 2px var(--frame-sell); }
 th.group.home { background: var(--home-bg); }
@@ -225,11 +216,10 @@ th.group.home { background: var(--home-bg); }
 /* --- Opcje --- */
 .optionsWrap { position: relative; }
 .optionsPanel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: 290px; max-width: calc(100vw - 24px);
-  display: flex; flex-direction: column; gap: 14px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; padding: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.18); }
+  display: flex; flex-direction: column; gap: 14px; background: var(--surface); border: 1px solid var(--border); padding: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.18); }
 .optionsPanel label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
 .optionsPanel label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); cursor: pointer; }
-.optionsPanel select { padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+.optionsPanel select { padding: 7px 9px; border: 1px solid var(--border); background: var(--bg);
   color: var(--text); font-size: 14px; }
 
 /* --- Nagłówek: tytuł na środku, akcje w prawym górnym rogu --- */
@@ -244,12 +234,12 @@ header.topBar .controls { grid-column: 3; justify-self: end; flex-wrap: nowrap; 
 
 /* --- Menu (hamburger) --- */
 .menuButton { display: inline-flex; flex-direction: column; justify-content: center; gap: 4px; width: 38px; height: 36px; padding: 0 10px; }
-.menuButton span { display: block; height: 2px; border-radius: 1px; background: currentColor; }
+.menuButton span { display: block; height: 2px; background: currentColor; }
 .menuPanel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 200px; display: flex; flex-direction: column;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,.18); }
+  background: var(--surface); border: 1px solid var(--border); padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,.18); }
 .menuUser { font-size: 12px; color: var(--muted); padding: 6px 10px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .menuUser strong { color: var(--text); }
-.menuItem { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 6px; background: none; color: var(--text);
+.menuItem { display: block; width: 100%; text-align: left; padding: 8px 10px; background: none; color: var(--text);
   font-size: 14px; font-weight: 500; }
 .menuItem:hover { background: var(--hover); text-decoration: none; }
 
@@ -258,3 +248,75 @@ header.topBar .controls { grid-column: 3; justify-self: end; flex-wrap: nowrap; 
 .statusDot.ok { background: var(--beat-buy); }
 .statusDot.stale { background: var(--beat-sell); }
 th.group .statusDot { display: block; margin: 4px auto 0; }
+
+/* --- Pasek NBP (jak w TV) --- */
+:root { --ticker-bg: #1c1c1c; --ticker-text: #f1f1f1; --ticker-muted: #9a9a9a; --ticker-label: var(--accent);
+  --ticker-up: #4ade80; --ticker-down: #f87171; }
+.ticker { display: flex; align-items: stretch; height: 38px; background: var(--ticker-bg); color: var(--ticker-text);
+  overflow: hidden; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.ticker:hover { text-decoration: none; }
+.tickerPlaceholder { opacity: .6; }
+.tickerLabel { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--ticker-label);
+  font-weight: 800; letter-spacing: .06em; position: relative; z-index: 1; box-shadow: 6px 0 12px rgba(0,0,0,.35); }
+.tickerDate { font-weight: 500; letter-spacing: 0; font-size: 12px; opacity: .85; }
+.tickerViewport { flex: 1; min-width: 0; overflow: hidden; display: flex; align-items: center;
+  mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); }
+.tickerTrack { display: flex; width: max-content; animation: tickerScroll linear infinite; }
+.ticker:hover .tickerTrack, .ticker:focus-visible .tickerTrack { animation-play-state: paused; }
+.tickerGroup { display: flex; flex-shrink: 0; }
+.tickerItem { display: inline-flex; align-items: center; gap: 7px; padding: 0 18px; white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,.12); font-variant-numeric: tabular-nums; }
+.tickerItem .flag { width: 20px; height: 15px; box-shadow: none; }
+.tickerSym { font-weight: 700; }
+.tickerRate { font-weight: 500; }
+.tickerChg { font-size: 12px; }
+.tickerChg.up { color: var(--ticker-up); }
+.tickerChg.down { color: var(--ticker-down); }
+.tickerChg.flat { color: var(--ticker-muted); }
+.tickerCta { flex-shrink: 0; display: flex; align-items: center; padding: 0 14px; font-weight: 600; font-size: 12px;
+  color: var(--ticker-text); background: rgba(255,255,255,.08); position: relative; z-index: 1; }
+.ticker:hover .tickerCta { background: var(--accent); }
+@keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .tickerTrack { animation: none; }
+  .tickerViewport { overflow-x: auto; }
+  .tickerGroup[aria-hidden] { display: none; }
+}
+@media (max-width: 760px) {
+  .tickerCta { display: none; }
+  .tickerLabel .tickerDate { display: none; }
+}
+
+/* --- Dorex vs NBP --- */
+.nbpWrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); }
+table.nbp td, table.nbp th { padding: 7px 12px; }
+table.nbp thead th { text-align: right; }
+table.nbp thead th:first-child { text-align: left; }
+table.nbp td.num .sub { display: block; font-size: 11px; color: var(--muted); }
+table.nbp td.num .sub.alarm { color: var(--down); font-weight: 600; }
+table.nbp th.sep, table.nbp td.sep { border-left: 2px solid var(--border); }
+table.nbp tr.major td { font-weight: 500; }
+.nbpSummary { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.nbpStat { background: var(--surface); border: 1px solid var(--border); padding: 12px 14px; }
+.nbpStat .currency { margin-bottom: 8px; }
+.nbpStat dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; font-size: 12px; }
+.nbpStat dt { color: var(--muted); }
+.nbpStat dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.nbpStat dd strong { font-size: 14px; }
+
+/* --- Akcenty Dorexu poza tabelą kursów --- */
+.ticker { border-bottom: 2px solid var(--accent); }
+.titleBlock h1, main > header h1, main.narrow h1 { position: relative; padding-bottom: 6px; }
+.titleBlock h1::after, main > header h1::after, main.narrow h1::after { content: ""; position: absolute; bottom: 0; width: 44px; height: 3px; background: var(--accent); left: 0; }
+.titleBlock h1::after { left: 50%; transform: translateX(-50%); }
+.back a { font-weight: 600; }
+.card, .nbpStat, .loginCard { border-top: 3px solid var(--accent); }
+.nbpWrap { border-top: 3px solid var(--accent); }
+.menuPanel, .optionsPanel { border-top: 3px solid var(--accent); }
+.menuItem:hover { background: var(--accent-soft); color: var(--accent); }
+.optionsPanel input[type="checkbox"] { accent-color: var(--accent); }
+.optionsPanel select:focus, .userForm input:focus, .inlineForm input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+:focus-visible { outline-color: var(--accent); }
+
+/* Ostry wygląd: bez zaokrągleń (także w natywnych kontrolkach przeglądarki). */
+input, select, textarea, button { border-radius: 0; }

@@ -327,6 +327,9 @@ export default function Dashboard({
                 <div className="menuUser">
                   Zalogowano jako <strong>{user.username}</strong>
                 </div>
+                <Link href="/nbp" className="menuItem" onClick={() => setMenuOpen(false)}>
+                  Dorex vs NBP
+                </Link>
                 {user.isAdmin && (
                   <Link href="/uzytkownicy" className="menuItem" onClick={() => setMenuOpen(false)}>
                     Użytkownicy
