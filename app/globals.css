@@ -399,3 +399,13 @@ td.rankSym { font-weight: 700; font-size: 12px; color: var(--muted); }
 td.rankCellBox { text-align: center; white-space: nowrap; font-size: 11px; }
 td.rankCellBox .medal { margin-right: 2px; }
 @media (max-width: 760px) { .rankWrap { display: none; } .ratesLayout { display: block; } }
+
+/* Migający wykrzyknik przy walucie: Dorex ma najgorszy kurs w kupnie lub sprzedaży */
+.worstDot { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  width: 16px; height: 16px; border-radius: 50%; background: var(--beat-sell); color: #fff;
+  font-size: 11px; font-weight: 800; line-height: 1; cursor: help; animation: worstBlink 1s ease-in-out infinite; }
+.legendDot { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%;
+  background: var(--beat-sell); color: #fff; font-size: 9px; font-weight: 800; line-height: 1; vertical-align: middle;
+  animation: worstBlink 1s ease-in-out infinite; }
+@keyframes worstBlink { 0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--beat-sell); } 50% { opacity: .2; box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .worstDot, .legendDot { animation: none; } }

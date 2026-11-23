@@ -127,6 +127,29 @@ function rankOf(kind: "buy" | "sell", perSource: Record<string, StoredRate>): Ra
   return { place: better + 1, of: values.length, best };
 }
 
+/**
+ * Czy Dorex ma najgorszy kurs dla klienta: nikt nie jest od nas gorszy, a ktoś jest lepszy
+ * (remis wszystkich to nie „najgorszy”; remis na ostatnim miejscu — tak).
+ */
+function isWorst(kind: "buy" | "sell", perSource: Record<string, StoredRate>): boolean {
+  const mine = perSource[HOME_SOURCE_ID]?.[kind].value;
+  if (mine == null) return false;
+  const values = Object.values(perSource)
+    .map((r) => r[kind].value)
+    .filter((v): v is number => v != null);
+  const worse = values.some((v) => (kind === "buy" ? v < mine : v > mine));
+  const better = values.some((v) => (kind === "buy" ? v > mine : v < mine));
+  return better && !worse;
+}
+
+/** Migający czerwony wykrzyknik przy symbolu waluty, gdy Dorex jest ostatni w kupnie lub sprzedaży. */
+function WorstDot({ perSource }: { perSource: Record<string, StoredRate> }) {
+  const parts = [isWorst("buy", perSource) && "kupnie", isWorst("sell", perSource) && "sprzedaży"].filter(Boolean);
+  if (parts.length === 0) return null;
+  const info = `Dorex ma najgorszy kurs w ${parts.join(" i ")}`;
+  return <span className="worstDot" title={info} aria-label={info} role="img">!</span>;
+}
+
 const MEDALS = ["gold", "silver", "bronze"];
 
 function rankTitle(kind: "buy" | "sell", rank: Rank): string {
@@ -532,6 +555,7 @@ export default function Dashboard({
                   >
                     <Flag symbol={row.symbol} />
                     <span className="sym">{row.symbol}</span>
+                    <WorstDot perSource={row.perSource} />
                   </Link>
                 </td>
                 {sources.map((src) => {
@@ -592,6 +616,7 @@ export default function Dashboard({
             <Link href={`/waluta/${encodeURIComponent(row.symbol)}`} className="currency cardTitle" title={row.name}>
               <Flag symbol={row.symbol} />
               <span className="sym">{row.symbol}</span>
+              <WorstDot perSource={row.perSource} />
             </Link>
             {options.showRank && (
               <div className="cardRank">
@@ -643,6 +668,7 @@ export default function Dashboard({
             <span className="medal bronze">3</span>.
           </>
         )}
+        {" "}<span className="legendDot">!</span> przy walucie — Dorex ma najgorszy kurs w kupnie lub sprzedaży.
         {" "}Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
       </p>
     </main>
