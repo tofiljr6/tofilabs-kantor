@@ -144,12 +144,13 @@ export default function Dashboard({
 }) {
   const [state, setState] = useState(initial);
   const [loading, setLoading] = useState(false);
-  const [query, setQuery] = useState("");
   const [now, setNow] = useState<number | null>(null); // tylko w przeglądarce
   const [preview, setPreview] = useState<Anchor | null>(null);
   const [options, setOptions] = useState<Options>(DEFAULT_OPTIONS);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const optionsRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   // Numer kolumny (1-based, jak w :nth-child) pod kursorem — podświetlamy całą kolumnę.
   const [hoverCol, setHoverCol] = useState<number | null>(null);
   const trackColumn = (e: React.MouseEvent<HTMLTableElement>) => {
@@ -170,15 +171,17 @@ export default function Dashboard({
       return next;
     });
 
-  // Zamknij panel opcji po kliknięciu poza nim.
+  // Zamknij panel opcji / menu po kliknięciu poza nimi.
   useEffect(() => {
-    if (!optionsOpen) return;
+    if (!optionsOpen && !menuOpen) return;
     const onDown = (e: MouseEvent) => {
-      if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) setOptionsOpen(false);
+      const t = e.target as Node;
+      if (optionsRef.current && !optionsRef.current.contains(t)) setOptionsOpen(false);
+      if (menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [optionsOpen]);
+  }, [optionsOpen, menuOpen]);
 
   // Ramki porównania z Dorexem — wyłączane w opcjach.
   const beatFor = (src: string, kind: "buy" | "sell", r: StoredRate | undefined, home: StoredRate | undefined) =>
@@ -252,33 +255,33 @@ export default function Dashboard({
         bySymbol.set(r.symbol, row);
       }
     }
-    const q = query.trim().toLowerCase();
-    return [...bySymbol.values()]
-      .filter((row) => !q || row.symbol.toLowerCase().includes(q) || row.name.toLowerCase().includes(q));
-  }, [sources, query]);
+    return [...bySymbol.values()];
+  }, [sources]);
 
   const errors = sources.filter((s) => s.error);
-  const nextIn = state.updatedAt && now != null ? Math.max(0, Date.parse(state.updatedAt) + intervalMs - now) : 0;
-  const mm = Math.floor(nextIn / 60000);
-  const ss = Math.floor((nextIn % 60000) / 1000).toString().padStart(2, "0");
+  // Kantor aktualny = bez błędu i dane nie starsze niż 2 cykle scrapingu.
+  const statusOf = (src: (typeof sources)[number]) => {
+    const ok =
+      !src.error && src.scrapedAt != null && now != null && now - Date.parse(src.scrapedAt) <= 2 * intervalMs;
+    const info = `Ostatnia aktualizacja: ${fmtTime(src.scrapedAt)}${src.error ? ` · błąd: ${src.error}` : ""}`;
+    return { ok, info };
+  };
+  const statusDot = (src: (typeof sources)[number]) => {
+    if (now == null) return null; // status liczony dopiero w przeglądarce
+    const { ok, info } = statusOf(src);
+    return <span className={`statusDot ${ok ? "ok" : "stale"}`} title={info} aria-label={info} role="img" />;
+  };
 
   return (
     <main>
-      <header>
-        <div>
+      <header className="topBar">
+        <div className="titleBlock">
           <h1>Kursy walut</h1>
           <p className="muted">
-            Ostatni scraping: <strong>{fmtTime(state.updatedAt)}</strong>{" "}
-            {now != null && (due ? <> · pobieram nowe kursy…</> : <> · następny za {mm}:{ss}</>)}
+            Ostatnia aktualizacja: <strong>{fmtTime(state.updatedAt)}</strong>
           </p>
         </div>
         <div className="controls">
-          <input
-            type="search"
-            placeholder="Szukaj waluty…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
           <div className="optionsWrap" ref={optionsRef}>
             <button className="secondary" onClick={() => setOptionsOpen((o) => !o)} aria-expanded={optionsOpen}>
               Opcje
@@ -310,13 +313,31 @@ export default function Dashboard({
           <button onClick={() => load(true)} disabled={loading}>
             {loading ? "Pobieram…" : "Odśwież teraz"}
           </button>
-          <span className="userLabel">{user.username}</span>
-          {user.isAdmin && (
-            <Link href="/uzytkownicy" className="navLink">Użytkownicy</Link>
-          )}
-          <form action={logout}>
-            <button type="submit" className="secondary">Wyloguj</button>
-          </form>
+          <div className="optionsWrap" ref={menuRef}>
+            <button
+              className="secondary menuButton"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-expanded={menuOpen}
+              aria-label="Menu"
+            >
+              <span /><span /><span />
+            </button>
+            {menuOpen && (
+              <div className="menuPanel">
+                <div className="menuUser">
+                  Zalogowano jako <strong>{user.username}</strong>
+                </div>
+                {user.isAdmin && (
+                  <Link href="/uzytkownicy" className="menuItem" onClick={() => setMenuOpen(false)}>
+                    Użytkownicy
+                  </Link>
+                )}
+                <form action={logout}>
+                  <button type="submit" className="menuItem">Wyloguj</button>
+                </form>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -341,7 +362,7 @@ export default function Dashboard({
                 <th key={src.id} colSpan={2} className={`group${src.id === HOME_SOURCE_ID ? " home" : ""}`}>
                   <a href={src.url} target="_blank" rel="noreferrer">{src.name}</a>
                   {src.id === HOME_SOURCE_ID && <span className="homeTag">mój kantor</span>}
-                  <div className="muted small">{fmtTime(src.scrapedAt)}</div>
+                  {statusDot(src)}
                 </th>
               ))}
             </tr>
@@ -407,6 +428,7 @@ export default function Dashboard({
                   <div key={src.id} className={`sourceBox${r ? "" : " missing"}${isHome ? " home" : ""}`}>
                     <div className="sourceName">
                       {src.name}
+                      {statusDot(src)}
                       {isHome && <span className="homeTag">mój kantor</span>}
                     </div>
                     <div className="sourceRates">
