@@ -87,8 +87,9 @@ const changeTitle = (side: RateSide) =>
   changeOf(side).dir ? `Poprzednio: ${fmtRate(side.prev)} · zmiana: ${fmtTime(side.changedAt)}` : undefined;
 
 /**
- * Porównanie z naszym kantorem (HOME_SOURCE_ID): zielona ramka, gdy konkurencja KUPUJE taniej
- * niż my, czerwona, gdy SPRZEDAJE drożej. Nasza kolumna nie dostaje ramek.
+ * Porównanie z naszym kantorem (HOME_SOURCE_ID) — ramka tam, gdzie konkurencja jest lepsza dla
+ * klienta: zielona, gdy KUPUJE drożej niż my, czerwona, gdy SPRZEDAJE taniej. Nasza kolumna nie
+ * dostaje ramek.
  */
 type Beat = "beatBuy" | "beatSell" | null;
 
@@ -97,15 +98,15 @@ function beatOf(src: string, kind: "buy" | "sell", r: StoredRate | undefined, ho
   const mine = home[kind].value;
   const theirs = r[kind].value;
   if (mine == null || theirs == null) return null;
-  if (kind === "buy") return theirs < mine ? "beatBuy" : null;
-  return theirs > mine ? "beatSell" : null;
+  if (kind === "buy") return theirs > mine ? "beatBuy" : null;
+  return theirs < mine ? "beatSell" : null;
 }
 
 const beatTitle = (beat: Beat, home: StoredRate | undefined) =>
   beat === "beatBuy"
-    ? `Kupuje taniej niż Dorex (${fmtRate(home?.buy.value)})`
+    ? `Kupuje drożej niż Dorex (${fmtRate(home?.buy.value)})`
     : beat === "beatSell"
-      ? `Sprzedaje drożej niż Dorex (${fmtRate(home?.sell.value)})`
+      ? `Sprzedaje taniej niż Dorex (${fmtRate(home?.sell.value)})`
       : undefined;
 
 /**
@@ -629,8 +630,8 @@ export default function Dashboard({
         kolorem: {WINDOW_OPTIONS.find((o) => o.value === options.changeWindow)?.label}).
         {options.showBeat && (
           <>
-            {" "}Porównanie z Dorexem: <span className="legendBox beatBuy">zielona ramka</span> — kupuje taniej niż my,{" "}
-            <span className="legendBox beatSell">czerwona ramka</span> — sprzedaje drożej niż my.
+            {" "}Porównanie z Dorexem: <span className="legendBox beatBuy">zielona ramka</span> — kupuje drożej niż my,{" "}
+            <span className="legendBox beatSell">czerwona ramka</span> — sprzedaje taniej niż my.
           </>
         )}
         {options.showRank && (
