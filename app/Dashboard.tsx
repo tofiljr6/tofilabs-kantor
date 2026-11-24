@@ -324,7 +324,6 @@ export default function Dashboard({
   const q = query.trim().toUpperCase();
   const visibleRows = useMemo(() => (q ? rows.filter((r) => r.symbol.includes(q)) : rows), [rows, q]);
 
-  const errors = sources.filter((s) => s.error);
   // Kantor aktualny = bez błędu i dane nie starsze niż 2 cykle scrapingu.
   const statusOf = (src: (typeof sources)[number]) => {
     const ok =
@@ -332,6 +331,9 @@ export default function Dashboard({
     const info = `Ostatnia aktualizacja: ${fmtTime(src.scrapedAt)}${src.error ? ` · błąd: ${src.error}` : ""}`;
     return { ok, info };
   };
+  // Kantory z nieaktualnymi danymi (błąd scrapingu lub dane starsze niż 2 cykle) — liczone dopiero w przeglądarce.
+  const problems = now == null ? [] : sources.filter((s) => !statusOf(s).ok);
+  const allDown = sources.length > 0 && problems.length === sources.length;
   const statusDot = (src: (typeof sources)[number]) => {
     if (now == null) return null; // status liczony dopiero w przeglądarce
     const { ok, info } = statusOf(src);
@@ -437,11 +439,26 @@ export default function Dashboard({
         </div>
       </header>
 
-      {errors.map((s) => (
-        <p key={s.id} className="error">
-          {s.name}: {s.error}. Pokazuję ostatnie znane kursy.
+      {allDown && (
+        <p className="error">
+          Nie udało się pobrać kursów z żadnego kantoru — to wygląda na awarię po naszej stronie (np. przekroczony czas
+          połączenia). Poniżej widać ostatnie znane kursy, mogą być nieaktualne.
         </p>
-      ))}
+      )}
+      {!allDown &&
+        problems.map((s) => (
+          <div key={s.id} className="error">
+            <strong>Kursy z kantoru {s.name} nie są aktualne.</strong>{" "}
+            {s.scrapedAt ? `Ostatnia udana aktualizacja: ${fmtTime(s.scrapedAt)}.` : "Nie mamy jeszcze żadnych danych."}{" "}
+            Pokazuję ostatnie znane kursy.
+            {s.error && (
+              <details className="errDetails">
+                <summary>Więcej o błędzie</summary>
+                <code>{s.error}</code>
+              </details>
+            )}
+          </div>
+        ))}
 
       <div className="tableWrap">
         {hoverSelectors.length > 0 && (

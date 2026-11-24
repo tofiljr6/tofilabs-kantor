@@ -426,3 +426,7 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 .overviewRate { display: flex; flex-direction: column; gap: 4px; padding: 10px; border: 1px solid var(--border); }
 .overviewRate strong { font-size: 26px; font-variant-numeric: tabular-nums; }
 .overviewRate.best { border-color: var(--up); background: var(--up-bg); }
+
+.errDetails { margin-top: 4px; font-size: 12px; }
+.errDetails summary { cursor: pointer; }
+.errDetails code { display: block; margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
