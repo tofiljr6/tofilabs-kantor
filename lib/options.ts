@@ -41,7 +41,7 @@ export const DEFAULT_OPTIONS: Options = {
   showBeat: true,
   notifyEnabled: true,
   notifySymbols: ["EUR", "USD", "CHF", "GBP", "CZK"],
-  mutedSources: ["tavex"],
+  mutedSources: ["tavex-olawska"],
   notifySound: true,
   notifyChanges: true,
   notifyWorst: true,
