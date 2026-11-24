@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Flag from "@/components/Flag";
+import Toasts from "@/components/Toasts";
+import { collectEvents, detect, isWorst, newMemory, playPing, type Toast } from "@/lib/notify";
+import { DEFAULT_OPTIONS, loadOptions, saveOptions, WINDOW_OPTIONS, type ChangeWindow, type Options } from "@/lib/options";
 import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
 import { fmtDateTime, fmtDiff, fmtRate } from "@/lib/format";
@@ -15,35 +18,6 @@ import type { RateSide, RatesState, StoredRate } from "@/lib/types";
 const fmtTime = (iso: string | null) => fmtDateTime(iso, true);
 const POLL_MS = 30_000;
 
-
-type ChangeWindow = "last" | "5" | "10" | "15" | "30" | "60" | "all";
-const WINDOW_OPTIONS: { value: ChangeWindow; label: string }[] = [
-  { value: "last", label: "od ostatniej aktualizacji" },
-  { value: "5", label: "ostatnie 5 min" },
-  { value: "10", label: "ostatnie 10 min" },
-  { value: "15", label: "ostatnie 15 min" },
-  { value: "30", label: "ostatnie 30 min" },
-  { value: "60", label: "ostatnia 1 godzina" },
-  { value: "all", label: "bez limitu" },
-];
-type Options = { changeWindow: ChangeWindow; showBeat: boolean };
-const DEFAULT_OPTIONS: Options = { changeWindow: "last", showBeat: true };
-const OPTIONS_KEY = "kantor.options.v2";
-
-function loadOptions(): Options {
-  try {
-    const raw = JSON.parse(localStorage.getItem(OPTIONS_KEY) ?? "null");
-    if (raw && typeof raw === "object") {
-      return {
-        changeWindow: WINDOW_OPTIONS.some((o) => o.value === raw.changeWindow) ? raw.changeWindow : DEFAULT_OPTIONS.changeWindow,
-        showBeat: typeof raw.showBeat === "boolean" ? raw.showBeat : DEFAULT_OPTIONS.showBeat,
-      };
-    }
-  } catch {
-    // brak dostępu do localStorage — zostają domyślne
-  }
-  return DEFAULT_OPTIONS;
-}
 
 /** Czy zmiana z `changedAt` mieści się w wybranym oknie czasu. */
 function isFresh(changedAt: string | null, win: ChangeWindow, scrapedAt: string | null, now: number | null): boolean {
@@ -109,21 +83,6 @@ const beatTitle = (beat: Beat, home: StoredRate | undefined) =>
       ? `Sprzedaje taniej niż Dorex (${fmtRate(home?.sell.value)})`
       : undefined;
 
-/**
- * Czy Dorex ma najgorszy kurs dla klienta: nikt nie jest od nas gorszy, a ktoś jest lepszy
- * (remis wszystkich to nie „najgorszy”; remis na ostatnim miejscu — tak).
- */
-function isWorst(kind: "buy" | "sell", perSource: Record<string, StoredRate>): boolean {
-  const mine = perSource[HOME_SOURCE_ID]?.[kind].value;
-  if (mine == null) return false;
-  const values = Object.values(perSource)
-    .map((r) => r[kind].value)
-    .filter((v): v is number => v != null);
-  const worse = values.some((v) => (kind === "buy" ? v < mine : v > mine));
-  const better = values.some((v) => (kind === "buy" ? v > mine : v < mine));
-  return better && !worse;
-}
-
 /** Migający czerwony wykrzyknik przy symbolu waluty, gdy Dorex jest ostatni w kupnie lub sprzedaży. */
 function WorstDot({ perSource }: { perSource: Record<string, StoredRate> }) {
   const parts = [isWorst("buy", perSource) && "kupnie", isWorst("sell", perSource) && "sprzedaży"].filter(Boolean);
@@ -175,6 +134,14 @@ export default function Dashboard({
   user: CurrentUser;
 }) {
   const [state, setState] = useState(initial);
+  const stateRef = useRef(initial);
+  const memory = useRef(newMemory());
+  useEffect(() => {
+    collectEvents(initial, memory.current); // punkt odniesienia — bez powiadomień
+  }, [initial]);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastId = useRef(0);
+  const closeToast = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), []);
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState<number | null>(null); // tylko w przeglądarce
   const [preview, setPreview] = useState<Anchor | null>(null);
@@ -223,11 +190,7 @@ export default function Dashboard({
   const updateOptions = (patch: Partial<Options>) =>
     setOptions((prev) => {
       const next = { ...prev, ...patch };
-      try {
-        localStorage.setItem(OPTIONS_KEY, JSON.stringify(next));
-      } catch {
-        // nie zapisze się między wizytami — trudno
-      }
+      saveOptions(next);
       return next;
     });
 
@@ -258,6 +221,11 @@ export default function Dashboard({
     setPreview(null);
   };
 
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
+
   const busy = useRef(false);
   const lastAuto = useRef(0);
 
@@ -268,7 +236,18 @@ export default function Dashboard({
     try {
       const res = await fetch("/api/rates", { method: force ? "POST" : "GET", cache: "no-store" });
       if (res.status === 401) window.location.href = "/login";
-      else if (res.ok) setState(await res.json());
+      else if (res.ok) {
+        const next: RatesState = await res.json();
+        const o = optionsRef.current;
+        const added = collectEvents(next, memory.current);
+        const fresh = o.notifyEnabled ? detect(stateRef.current, next, added, o, memory.current) : [];
+        stateRef.current = next;
+        setState(next);
+        if (fresh.length > 0) {
+          setToasts((t) => [...t, ...fresh.map((n) => ({ ...n, id: ++toastId.current }))].slice(-6));
+          if (o.notifySound) playPing();
+        }
+      }
     } catch {
       // brak sieci — spróbujemy przy następnym cyklu
     } finally {
@@ -412,6 +391,9 @@ export default function Dashboard({
                   <span>Ramki porównania z Dorexem (zielona / czerwona)</span>
                 </label>
                 </div>
+                <Link href="/powiadomienia" className="menuItem" onClick={() => setMenuOpen(false)}>
+                  Powiadomienia
+                </Link>
                 <Link href="/nbp" className="menuItem" onClick={() => setMenuOpen(false)}>
                   Dorex vs NBP
                 </Link>
@@ -550,6 +532,7 @@ export default function Dashboard({
         {visibleRows.length === 0 && <p className="muted empty">{q ? `Brak waluty „${query.trim()}”.` : "Brak danych."}</p>}
       </div>
       {preview && <HoverPreview anchor={preview} />}
+      <Toasts toasts={toasts} onClose={closeToast} />
       <p className="muted small foot">
         ▲ zielony — kurs wzrósł, ▼ czerwony — kurs spadł (o tyle zł względem poprzedniej różnej wartości;
         kolorem: {WINDOW_OPTIONS.find((o) => o.value === options.changeWindow)?.label}).
