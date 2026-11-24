@@ -449,3 +449,13 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 .toastClose { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; padding: 0; border: 0; background: transparent;
   color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
 .toastClose:hover { color: var(--text); }
+.toast.alert { border-left-color: #e0a800; }
+.settings .card { margin-bottom: 16px; }
+.settingsList { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+.settingsRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.settings label.check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.settings input[type="checkbox"] { accent-color: var(--accent); }
+.settings .inline { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.numInput, .symbolsInput { padding: 7px 9px; border: 1px solid var(--border); background: var(--bg); color: inherit; font: inherit; border-radius: 0; }
+.numInput { width: 84px; }
+.symbolsInput { width: 100%; margin-top: 8px; text-transform: uppercase; }

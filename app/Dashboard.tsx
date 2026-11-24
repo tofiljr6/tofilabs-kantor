@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Flag from "@/components/Flag";
 import Toasts from "@/components/Toasts";
-import { diffStates, isWorst, playPing, type Toast } from "@/lib/notify";
+import { collectEvents, detect, isWorst, newMemory, playPing, type Toast } from "@/lib/notify";
+import { DEFAULT_OPTIONS, loadOptions, saveOptions, WINDOW_OPTIONS, type ChangeWindow, type Options } from "@/lib/options";
 import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
 import { fmtDateTime, fmtDiff, fmtRate } from "@/lib/format";
@@ -17,50 +18,6 @@ import type { RateSide, RatesState, StoredRate } from "@/lib/types";
 const fmtTime = (iso: string | null) => fmtDateTime(iso, true);
 const POLL_MS = 30_000;
 
-
-type ChangeWindow = "last" | "5" | "10" | "15" | "30" | "60" | "all";
-const WINDOW_OPTIONS: { value: ChangeWindow; label: string }[] = [
-  { value: "last", label: "od ostatniej aktualizacji" },
-  { value: "5", label: "ostatnie 5 min" },
-  { value: "10", label: "ostatnie 10 min" },
-  { value: "15", label: "ostatnie 15 min" },
-  { value: "30", label: "ostatnie 30 min" },
-  { value: "60", label: "ostatnia 1 godzina" },
-  { value: "all", label: "bez limitu" },
-];
-type Options = {
-  changeWindow: ChangeWindow;
-  showBeat: boolean;
-  notifyChanges: boolean;
-  notifyWorst: boolean;
-  notifySound: boolean;
-};
-const DEFAULT_OPTIONS: Options = {
-  changeWindow: "last",
-  showBeat: true,
-  notifyChanges: true,
-  notifyWorst: true,
-  notifySound: true,
-};
-const OPTIONS_KEY = "kantor.options.v2";
-
-function loadOptions(): Options {
-  try {
-    const raw = JSON.parse(localStorage.getItem(OPTIONS_KEY) ?? "null");
-    if (raw && typeof raw === "object") {
-      return {
-        changeWindow: WINDOW_OPTIONS.some((o) => o.value === raw.changeWindow) ? raw.changeWindow : DEFAULT_OPTIONS.changeWindow,
-        showBeat: typeof raw.showBeat === "boolean" ? raw.showBeat : DEFAULT_OPTIONS.showBeat,
-        notifyChanges: typeof raw.notifyChanges === "boolean" ? raw.notifyChanges : DEFAULT_OPTIONS.notifyChanges,
-        notifyWorst: typeof raw.notifyWorst === "boolean" ? raw.notifyWorst : DEFAULT_OPTIONS.notifyWorst,
-        notifySound: typeof raw.notifySound === "boolean" ? raw.notifySound : DEFAULT_OPTIONS.notifySound,
-      };
-    }
-  } catch {
-    // brak dostępu do localStorage — zostają domyślne
-  }
-  return DEFAULT_OPTIONS;
-}
 
 /** Czy zmiana z `changedAt` mieści się w wybranym oknie czasu. */
 function isFresh(changedAt: string | null, win: ChangeWindow, scrapedAt: string | null, now: number | null): boolean {
@@ -178,6 +135,10 @@ export default function Dashboard({
 }) {
   const [state, setState] = useState(initial);
   const stateRef = useRef(initial);
+  const memory = useRef(newMemory());
+  useEffect(() => {
+    collectEvents(initial, memory.current); // punkt odniesienia — bez powiadomień
+  }, [initial]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
   const closeToast = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), []);
@@ -229,11 +190,7 @@ export default function Dashboard({
   const updateOptions = (patch: Partial<Options>) =>
     setOptions((prev) => {
       const next = { ...prev, ...patch };
-      try {
-        localStorage.setItem(OPTIONS_KEY, JSON.stringify(next));
-      } catch {
-        // nie zapisze się między wizytami — trudno
-      }
+      saveOptions(next);
       return next;
     });
 
@@ -282,7 +239,8 @@ export default function Dashboard({
       else if (res.ok) {
         const next: RatesState = await res.json();
         const o = optionsRef.current;
-        const fresh = diffStates(stateRef.current, next, { changes: o.notifyChanges, worst: o.notifyWorst });
+        const added = collectEvents(next, memory.current);
+        const fresh = detect(stateRef.current, next, added, o, memory.current);
         stateRef.current = next;
         setState(next);
         if (fresh.length > 0) {
@@ -432,31 +390,10 @@ export default function Dashboard({
                   />
                   <span>Ramki porównania z Dorexem (zielona / czerwona)</span>
                 </label>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={options.notifyChanges}
-                    onChange={(e) => updateOptions({ notifyChanges: e.target.checked })}
-                  />
-                  <span>Powiadomienia o zmianie kursów przez kantor</span>
-                </label>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={options.notifyWorst}
-                    onChange={(e) => updateOptions({ notifyWorst: e.target.checked })}
-                  />
-                  <span>Powiadomienia, gdy Dorex jest najgorszy (!)</span>
-                </label>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={options.notifySound}
-                    onChange={(e) => updateOptions({ notifySound: e.target.checked })}
-                  />
-                  <span>Dźwięk powiadomień</span>
-                </label>
                 </div>
+                <Link href="/powiadomienia" className="menuItem" onClick={() => setMenuOpen(false)}>
+                  Powiadomienia
+                </Link>
                 <Link href="/nbp" className="menuItem" onClick={() => setMenuOpen(false)}>
                   Dorex vs NBP
                 </Link>
