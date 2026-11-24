@@ -440,16 +440,16 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 /* --- Powiadomienia (prawy dolny róg) --- */
 .toasts { position: fixed; right: 16px; bottom: 16px; z-index: 50; display: flex; flex-direction: column; gap: 10px;
   width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
-.toast { position: relative; background: var(--surface); color: var(--text); border: 1px solid var(--border);
-  border-left: 5px solid var(--accent); padding: 12px 34px 12px 14px; box-shadow: 0 6px 24px rgba(0, 0, 0, .35); font-size: 13px; }
-.toast.worst { border-left-color: var(--beat-sell); }
+.toast { position: relative; background: #ff5c00; color: #fff; border: 1px solid #fff;
+  padding: 12px 34px 14px 14px; box-shadow: 0 8px 28px rgba(0, 0, 0, .55); font-size: 13px; }
 .toastTitle { font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
 .toast ul { margin: 0; padding-left: 16px; }
 .toast li { margin: 2px 0; font-variant-numeric: tabular-nums; }
 .toastClose { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; padding: 0; border: 0; background: transparent;
-  color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
-.toastClose:hover { color: var(--text); }
-.toast.alert { border-left-color: #e0a800; }
+  color: #fff; opacity: .85; font-size: 20px; line-height: 1; cursor: pointer; }
+.toastClose:hover { opacity: 1; }
+.toast .muted { color: rgba(255, 255, 255, .85); }
+.toast .legendDot { background: #fff; color: #d11; }
 .settings .card { margin-bottom: 16px; }
 .settingsList { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
 .settingsRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
@@ -460,9 +460,7 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 .numInput { width: 84px; }
 .symbolsInput { width: 100%; margin-top: 8px; text-transform: uppercase; }
 .settings.off .card:not(:first-child) { opacity: .5; }
-.toastTimer { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--accent);
-  transform-origin: left; animation: toastCountdown linear forwards; opacity: .8; }
-.toast.worst .toastTimer { background: var(--beat-sell); }
-.toast.alert .toastTimer { background: #e0a800; }
+.toastTimer { position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: #fff;
+  transform-origin: left; animation: toastCountdown linear forwards; }
 @keyframes toastCountdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) { .toastTimer { animation: none; display: none; } }
