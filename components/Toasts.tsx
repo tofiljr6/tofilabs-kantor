@@ -19,6 +19,7 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: (id: number) => 
         {shown.map((l) => <li key={l}>{l}</li>)}
         {toast.lines.length > shown.length && <li className="muted">…i {toast.lines.length - shown.length} więcej</li>}
       </ul>
+      <div className="toastTimer" style={{ animationDuration: `${TOAST_MS}ms` }} />
     </div>
   );
 }

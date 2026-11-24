@@ -460,3 +460,9 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 .numInput { width: 84px; }
 .symbolsInput { width: 100%; margin-top: 8px; text-transform: uppercase; }
 .settings.off .card:not(:first-child) { opacity: .5; }
+.toastTimer { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--accent);
+  transform-origin: left; animation: toastCountdown linear forwards; opacity: .8; }
+.toast.worst .toastTimer { background: var(--beat-sell); }
+.toast.alert .toastTimer { background: #e0a800; }
+@keyframes toastCountdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .toastTimer { animation: none; display: none; } }
