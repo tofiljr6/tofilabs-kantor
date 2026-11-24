@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kursy walut — dashboard",
+  title: { default: "Kantor - konkurencja rynek", template: "%s — Kantor - konkurencja rynek" },
   description: "Kursy walut z kantorów (web scraping)",
   robots: { index: false, follow: false },
 };

@@ -7,6 +7,7 @@ import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
 import { fmtDateTime, fmtDiff, fmtRate } from "@/lib/format";
 import { HOME_SOURCE_ID } from "@/lib/home";
+import { APP_VERSION } from "@/lib/version";
 import type { CurrentUser } from "@/lib/session";
 import { applyTheme, currentTheme, type Theme } from "@/lib/theme";
 import type { RateSide, RatesState, StoredRate } from "@/lib/types";
@@ -178,8 +179,6 @@ export default function Dashboard({
   const [now, setNow] = useState<number | null>(null); // tylko w przeglądarce
   const [preview, setPreview] = useState<Anchor | null>(null);
   const [options, setOptions] = useState<Options>(DEFAULT_OPTIONS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
-  const optionsRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
@@ -232,17 +231,16 @@ export default function Dashboard({
       return next;
     });
 
-  // Zamknij panel opcji / menu po kliknięciu poza nimi.
+  // Zamknij menu po kliknięciu poza nimi.
   useEffect(() => {
-    if (!optionsOpen && !menuOpen) return;
+    if (!menuOpen) return;
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
-      if (optionsRef.current && !optionsRef.current.contains(t)) setOptionsOpen(false);
       if (menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [optionsOpen, menuOpen]);
+  }, [menuOpen]);
 
   // Ramki porównania z Dorexem — wyłączane w opcjach.
   const beatFor = (src: string, kind: "buy" | "sell", r: StoredRate | undefined, home: StoredRate | undefined) =>
@@ -323,7 +321,6 @@ export default function Dashboard({
   const q = query.trim().toUpperCase();
   const visibleRows = useMemo(() => (q ? rows.filter((r) => r.symbol.includes(q)) : rows), [rows, q]);
 
-  const errors = sources.filter((s) => s.error);
   // Kantor aktualny = bez błędu i dane nie starsze niż 2 cykle scrapingu.
   const statusOf = (src: (typeof sources)[number]) => {
     const ok =
@@ -331,6 +328,9 @@ export default function Dashboard({
     const info = `Ostatnia aktualizacja: ${fmtTime(src.scrapedAt)}${src.error ? ` · błąd: ${src.error}` : ""}`;
     return { ok, info };
   };
+  // Kantory z nieaktualnymi danymi (błąd scrapingu lub dane starsze niż 2 cykle) — liczone dopiero w przeglądarce.
+  const problems = now == null ? [] : sources.filter((s) => !statusOf(s).ok);
+  const allDown = sources.length > 0 && problems.length === sources.length;
   const statusDot = (src: (typeof sources)[number]) => {
     if (now == null) return null; // status liczony dopiero w przeglądarce
     const { ok, info } = statusOf(src);
@@ -357,13 +357,25 @@ export default function Dashboard({
             autoComplete="off"
             spellCheck={false}
           />
-          <div className="optionsWrap" ref={optionsRef}>
-            <button className="secondary" onClick={() => setOptionsOpen((o) => !o)} aria-expanded={optionsOpen}>
-              Opcje
+          <button onClick={() => load(true)} disabled={loading}>
+            {loading ? "Pobieram…" : "Odśwież teraz"}
+          </button>
+          <div className="optionsWrap" ref={menuRef}>
+            <button
+              className="secondary menuButton"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-expanded={menuOpen}
+              aria-label="Menu"
+            >
+              <span /><span /><span />
             </button>
-            {optionsOpen && (
-              <div className="optionsPanel">
-                <div className="optionGroup">
+            {menuOpen && (
+              <div className="menuPanel">
+                <div className="menuUser">
+                  Zalogowano jako <strong>{user.username}</strong>
+                </div>
+                <div className="menuOptions">
+                  <div className="optionGroup">
                   <span>Motyw</span>
                   <div className="segmented" role="radiogroup" aria-label="Motyw">
                     {([["dark", "Ciemny"], ["light", "Jasny"]] as const).map(([value, label]) => (
@@ -399,25 +411,6 @@ export default function Dashboard({
                   />
                   <span>Ramki porównania z Dorexem (zielona / czerwona)</span>
                 </label>
-              </div>
-            )}
-          </div>
-          <button onClick={() => load(true)} disabled={loading}>
-            {loading ? "Pobieram…" : "Odśwież teraz"}
-          </button>
-          <div className="optionsWrap" ref={menuRef}>
-            <button
-              className="secondary menuButton"
-              onClick={() => setMenuOpen((o) => !o)}
-              aria-expanded={menuOpen}
-              aria-label="Menu"
-            >
-              <span /><span /><span />
-            </button>
-            {menuOpen && (
-              <div className="menuPanel">
-                <div className="menuUser">
-                  Zalogowano jako <strong>{user.username}</strong>
                 </div>
                 <Link href="/nbp" className="menuItem" onClick={() => setMenuOpen(false)}>
                   Dorex vs NBP
@@ -436,11 +429,26 @@ export default function Dashboard({
         </div>
       </header>
 
-      {errors.map((s) => (
-        <p key={s.id} className="error">
-          {s.name}: {s.error}. Pokazuję ostatnie znane kursy.
+      {allDown && (
+        <p className="error">
+          Nie udało się pobrać kursów z żadnego kantoru — to wygląda na awarię po naszej stronie (np. przekroczony czas
+          połączenia). Poniżej widać ostatnie znane kursy, mogą być nieaktualne.
         </p>
-      ))}
+      )}
+      {!allDown &&
+        problems.map((s) => (
+          <div key={s.id} className="error">
+            <strong>Kursy z kantoru {s.name} nie są aktualne.</strong>{" "}
+            {s.scrapedAt ? `Ostatnia udana aktualizacja: ${fmtTime(s.scrapedAt)}.` : "Nie mamy jeszcze żadnych danych."}{" "}
+            Pokazuję ostatnie znane kursy.
+            {s.error && (
+              <details className="errDetails">
+                <summary>Więcej o błędzie</summary>
+                <code>{s.error}</code>
+              </details>
+            )}
+          </div>
+        ))}
 
       <div className="tableWrap">
         {hoverSelectors.length > 0 && (
@@ -455,7 +463,7 @@ export default function Dashboard({
             <tr>
               <th rowSpan={2} className="stick">Waluta</th>
               {sources.map((src) => (
-                <th key={src.id} colSpan={2} className={`group${src.id === HOME_SOURCE_ID ? " home homeL homeR" : ""}`}>
+                <th key={src.id} colSpan={2} className={`group${src.id === HOME_SOURCE_ID ? " home homeL homeR stickHG" : ""}`}>
                   <a href={src.url} target="_blank" rel="noreferrer">{src.name}</a>
                   {src.id === HOME_SOURCE_ID && <span className="homeTag">mój kantor</span>}
                   {statusDot(src)}
@@ -464,8 +472,8 @@ export default function Dashboard({
             </tr>
             <tr>
               {sources.map((src) => [
-                <th key={`${src.id}-b`} className={`num groupStart${src.id === HOME_SOURCE_ID ? " homeL" : ""}`}>Kupuje</th>,
-                <th key={`${src.id}-s`} className={`num pairSell${src.id === HOME_SOURCE_ID ? " homeR" : ""}`}>Sprzedaje</th>,
+                <th key={`${src.id}-b`} className={`num groupStart${src.id === HOME_SOURCE_ID ? " homeL stickHB" : ""}`}>Kupuje</th>,
+                <th key={`${src.id}-s`} className={`num pairSell${src.id === HOME_SOURCE_ID ? " homeR stickHS" : ""}`}>Sprzedaje</th>,
               ])}
             </tr>
           </thead>
@@ -491,8 +499,8 @@ export default function Dashboard({
                   const bb = beatFor(src.id, "buy", r, home);
                   const bs = beatFor(src.id, "sell", r, home);
                   return [
-                    <RateCell key={`${src.id}-b`} side={r?.buy} fresh={freshFor(r?.buy, src.scrapedAt)} beat={bb} beatInfo={beatTitle(bb, home)} extra={src.id === HOME_SOURCE_ID ? "homeL" : undefined} />,
-                    <RateCell key={`${src.id}-s`} side={r?.sell} fresh={freshFor(r?.sell, src.scrapedAt)} beat={bs} beatInfo={beatTitle(bs, home)} extra={src.id === HOME_SOURCE_ID ? "pairSell homeR" : "pairSell"} />,
+                    <RateCell key={`${src.id}-b`} side={r?.buy} fresh={freshFor(r?.buy, src.scrapedAt)} beat={bb} beatInfo={beatTitle(bb, home)} extra={src.id === HOME_SOURCE_ID ? "homeL stickHB" : undefined} />,
+                    <RateCell key={`${src.id}-s`} side={r?.sell} fresh={freshFor(r?.sell, src.scrapedAt)} beat={bs} beatInfo={beatTitle(bs, home)} extra={src.id === HOME_SOURCE_ID ? "pairSell homeR stickHS" : "pairSell"} />,
                   ];
                 })}
               </tr>
@@ -555,6 +563,7 @@ export default function Dashboard({
         {" "}Kliknij w kurs, aby skopiować go do schowka.
         {" "}Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
       </p>
+      <p className="muted small version">v{APP_VERSION}</p>
     </main>
   );
 }

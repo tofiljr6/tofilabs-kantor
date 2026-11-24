@@ -76,6 +76,19 @@ table.rates col.colRate { width: 74px; }
 th.group { overflow-wrap: anywhere; }
 .stick { position: sticky; left: 0; background: var(--surface); z-index: 1; padding: 5px 8px; }
 thead th.stick { background: var(--head); z-index: 2; }
+/* Kolumny Dorexa przyklejone obok kolumny waluty (szerokości z <colgroup>: 96 px + 74 px) */
+table.rates .stickHB, table.rates .stickHS, table.rates .stickHG { position: sticky; z-index: 1; background-color: var(--surface); }
+table.rates .stickHG, table.rates .stickHB { left: 96px; }
+table.rates .stickHS { left: 170px; }
+table.rates thead .stickHG, table.rates thead .stickHB, table.rates thead .stickHS { z-index: 2; background-color: var(--head); }
+table.rates .stickHG { background-image: linear-gradient(var(--home-bg), var(--home-bg)); }
+table.rates td.stickHB.up, table.rates td.stickHS.up { background-image: linear-gradient(var(--up-bg), var(--up-bg)); }
+table.rates td.stickHB.down, table.rates td.stickHS.down { background-image: linear-gradient(var(--down-bg), var(--down-bg)); }
+/* border-collapse nie przesuwa ramek razem z komórką — akcent rysujemy cieniem */
+table.rates .stickHG { border-left-width: 0; border-right-width: 0; box-shadow: inset 5px 0 0 var(--accent), inset -5px 0 0 var(--accent); }
+table.rates .stickHB { border-left-width: 0; box-shadow: inset 5px 0 0 var(--accent); }
+table.rates .stickHS { border-right-width: 0; box-shadow: inset -5px 0 0 var(--accent); }
+.version { text-align: right; margin: 4px 0 0; }
 .sym { font-weight: 700; font-size: 14px; }
 .empty { text-align: center; padding: 24px; }
 a { color: var(--accent); text-decoration: none; }
@@ -240,7 +253,7 @@ header.topBar .controls { grid-column: 3; justify-self: end; flex-wrap: nowrap; 
 /* --- Menu (hamburger) --- */
 .menuButton { display: inline-flex; flex-direction: column; justify-content: center; gap: 4px; width: 38px; height: 36px; padding: 0 10px; }
 .menuButton span { display: block; height: 2px; background: currentColor; }
-.menuPanel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 200px; display: flex; flex-direction: column;
+.menuPanel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 290px; max-width: calc(100vw - 24px); display: flex; flex-direction: column;
   background: var(--surface); border: 1px solid var(--border); padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,.18); }
 .menuUser { font-size: 12px; color: var(--muted); padding: 6px 10px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .menuUser strong { color: var(--text); }
@@ -399,7 +412,7 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 @media (prefers-reduced-motion: reduce) { .worstDot, .legendDot { animation: none; } }
 
 .symbolSearch { padding: 8px 10px; border: 1px solid var(--border); background: var(--bg); color: inherit;
-  border-radius: 6px; font: inherit; width: 200px; max-width: 100%; }
+  border-radius: 0; -webkit-appearance: none; appearance: none; font: inherit; width: 200px; max-width: 100%; }
 .symbolSearch:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 @media (max-width: 700px) { .symbolSearch { flex: 1 1 100%; width: auto; } }
 
@@ -413,3 +426,13 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 .overviewRate { display: flex; flex-direction: column; gap: 4px; padding: 10px; border: 1px solid var(--border); }
 .overviewRate strong { font-size: 26px; font-variant-numeric: tabular-nums; }
 .overviewRate.best { border-color: var(--up); background: var(--up-bg); }
+
+.errDetails { margin-top: 4px; font-size: 12px; }
+.errDetails summary { cursor: pointer; }
+.errDetails code { display: block; margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
+
+.menuOptions { display: flex; flex-direction: column; gap: 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.menuOptions label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.menuOptions label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); cursor: pointer; }
+.menuOptions select { padding: 7px 9px; border: 1px solid var(--border); background: var(--bg); color: inherit; font: inherit; }
+.menuOptions input[type="checkbox"] { accent-color: var(--accent); }
