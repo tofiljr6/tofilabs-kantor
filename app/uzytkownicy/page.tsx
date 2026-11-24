@@ -6,7 +6,7 @@ import { listUsers } from "@/lib/users";
 import { AddUserForm, DeleteUserButton, ResetPasswordForm } from "./forms";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Użytkownicy — Kursy walut" };
+export const metadata: Metadata = { title: "Użytkownicy" };
 
 export default async function UsersPage() {
   const admin = await requireAdmin();

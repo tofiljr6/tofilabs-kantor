@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import LoginForm from "./LoginForm";
 
-export const metadata: Metadata = { title: "Logowanie — Kursy walut" };
+export const metadata: Metadata = { title: "Logowanie" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
