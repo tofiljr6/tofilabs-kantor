@@ -179,8 +179,6 @@ export default function Dashboard({
   const [now, setNow] = useState<number | null>(null); // tylko w przeglądarce
   const [preview, setPreview] = useState<Anchor | null>(null);
   const [options, setOptions] = useState<Options>(DEFAULT_OPTIONS);
-  const [optionsOpen, setOptionsOpen] = useState(false);
-  const optionsRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
@@ -233,17 +231,16 @@ export default function Dashboard({
       return next;
     });
 
-  // Zamknij panel opcji / menu po kliknięciu poza nimi.
+  // Zamknij menu po kliknięciu poza nimi.
   useEffect(() => {
-    if (!optionsOpen && !menuOpen) return;
+    if (!menuOpen) return;
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
-      if (optionsRef.current && !optionsRef.current.contains(t)) setOptionsOpen(false);
       if (menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [optionsOpen, menuOpen]);
+  }, [menuOpen]);
 
   // Ramki porównania z Dorexem — wyłączane w opcjach.
   const beatFor = (src: string, kind: "buy" | "sell", r: StoredRate | undefined, home: StoredRate | undefined) =>
@@ -360,13 +357,25 @@ export default function Dashboard({
             autoComplete="off"
             spellCheck={false}
           />
-          <div className="optionsWrap" ref={optionsRef}>
-            <button className="secondary" onClick={() => setOptionsOpen((o) => !o)} aria-expanded={optionsOpen}>
-              Opcje
+          <button onClick={() => load(true)} disabled={loading}>
+            {loading ? "Pobieram…" : "Odśwież teraz"}
+          </button>
+          <div className="optionsWrap" ref={menuRef}>
+            <button
+              className="secondary menuButton"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-expanded={menuOpen}
+              aria-label="Menu"
+            >
+              <span /><span /><span />
             </button>
-            {optionsOpen && (
-              <div className="optionsPanel">
-                <div className="optionGroup">
+            {menuOpen && (
+              <div className="menuPanel">
+                <div className="menuUser">
+                  Zalogowano jako <strong>{user.username}</strong>
+                </div>
+                <div className="menuOptions">
+                  <div className="optionGroup">
                   <span>Motyw</span>
                   <div className="segmented" role="radiogroup" aria-label="Motyw">
                     {([["dark", "Ciemny"], ["light", "Jasny"]] as const).map(([value, label]) => (
@@ -402,25 +411,6 @@ export default function Dashboard({
                   />
                   <span>Ramki porównania z Dorexem (zielona / czerwona)</span>
                 </label>
-              </div>
-            )}
-          </div>
-          <button onClick={() => load(true)} disabled={loading}>
-            {loading ? "Pobieram…" : "Odśwież teraz"}
-          </button>
-          <div className="optionsWrap" ref={menuRef}>
-            <button
-              className="secondary menuButton"
-              onClick={() => setMenuOpen((o) => !o)}
-              aria-expanded={menuOpen}
-              aria-label="Menu"
-            >
-              <span /><span /><span />
-            </button>
-            {menuOpen && (
-              <div className="menuPanel">
-                <div className="menuUser">
-                  Zalogowano jako <strong>{user.username}</strong>
                 </div>
                 <Link href="/nbp" className="menuItem" onClick={() => setMenuOpen(false)}>
                   Dorex vs NBP

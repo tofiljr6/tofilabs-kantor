@@ -253,7 +253,7 @@ header.topBar .controls { grid-column: 3; justify-self: end; flex-wrap: nowrap; 
 /* --- Menu (hamburger) --- */
 .menuButton { display: inline-flex; flex-direction: column; justify-content: center; gap: 4px; width: 38px; height: 36px; padding: 0 10px; }
 .menuButton span { display: block; height: 2px; background: currentColor; }
-.menuPanel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 200px; display: flex; flex-direction: column;
+.menuPanel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 290px; max-width: calc(100vw - 24px); display: flex; flex-direction: column;
   background: var(--surface); border: 1px solid var(--border); padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,.18); }
 .menuUser { font-size: 12px; color: var(--muted); padding: 6px 10px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .menuUser strong { color: var(--text); }
@@ -412,7 +412,7 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 @media (prefers-reduced-motion: reduce) { .worstDot, .legendDot { animation: none; } }
 
 .symbolSearch { padding: 8px 10px; border: 1px solid var(--border); background: var(--bg); color: inherit;
-  border-radius: 6px; font: inherit; width: 200px; max-width: 100%; }
+  border-radius: 0; -webkit-appearance: none; appearance: none; font: inherit; width: 200px; max-width: 100%; }
 .symbolSearch:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 @media (max-width: 700px) { .symbolSearch { flex: 1 1 100%; width: auto; } }
 
@@ -430,3 +430,9 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 .errDetails { margin-top: 4px; font-size: 12px; }
 .errDetails summary { cursor: pointer; }
 .errDetails code { display: block; margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
+
+.menuOptions { display: flex; flex-direction: column; gap: 12px; padding: 8px 10px 12px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.menuOptions label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.menuOptions label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); cursor: pointer; }
+.menuOptions select { padding: 7px 9px; border: 1px solid var(--border); background: var(--bg); color: inherit; font: inherit; }
+.menuOptions input[type="checkbox"] { accent-color: var(--accent); }
