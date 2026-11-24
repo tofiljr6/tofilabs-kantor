@@ -116,12 +116,14 @@ export function detect(
 ): NewToast[] {
   const out: NewToast[] = [];
   const symbols = new Set(o.notifySymbols);
+  const muted = new Set(o.mutedSources); // wyciszone kantory: ich zmiany nie dają powiadomień
   const prevRows = perSymbol(prev);
   const nextRows = perSymbol(next);
 
   // 1. Kantor zmienił kursy (ostatnia wartość vs poprzedni odczyt).
   if (o.notifyChanges) {
     for (const src of Object.values(next.sources)) {
+      if (muted.has(src.id)) continue;
       const before = new Map((prev.sources[src.id]?.rates ?? []).map((r) => [r.symbol, r]));
       if (before.size === 0) continue; // brak punktu odniesienia
       const lines: string[] = [];
@@ -156,7 +158,7 @@ export function detect(
     }
     if (o.notifyInverted) {
       for (const [id, r] of Object.entries(row)) {
-        if (inverted(r) && !inverted(old[id])) {
+        if (!muted.has(id) && inverted(r) && !inverted(old[id])) {
           const name = next.sources[id]?.name ?? id;
           inv.push(`${name} ${symbol}: kupno ${fmtRate(r.buy.value)} > sprzedaż ${fmtRate(r.sell.value)}`);
         }
@@ -170,7 +172,7 @@ export function detect(
   // 5. Skok kursu o co najmniej próg.
   if (o.notifyJump) {
     const lines = added
-      .filter((e) => symbols.has(e.symbol) && Math.abs(e.to - e.from) >= o.jumpThreshold - EPS)
+      .filter((e) => symbols.has(e.symbol) && !muted.has(e.src) && Math.abs(e.to - e.from) >= o.jumpThreshold - EPS)
       .map((e) => `${e.srcName} ${e.symbol} ${KIND_LABEL[e.kind]}: ${fmtRate(e.from)} → ${fmtRate(e.to)} (${e.to > e.from ? "+" : "−"}${fmtDiff(Math.abs(e.to - e.from))})`);
     if (lines.length) out.push({ kind: "alert", title: "Duży skok kursu", lines });
   }
@@ -179,7 +181,7 @@ export function detect(
   if (o.notifyFast && added.length > 0) {
     const from = now - o.fastMinutes * 60_000;
     const lines: string[] = [];
-    const touched = new Set(added.filter((e) => symbols.has(e.symbol)).map((e) => `${e.src}|${e.symbol}|${e.kind}`));
+    const touched = new Set(added.filter((e) => symbols.has(e.symbol) && !muted.has(e.src)).map((e) => `${e.src}|${e.symbol}|${e.kind}`));
     for (const k of touched) {
       const evs = mem.events.filter((e) => `${e.src}|${e.symbol}|${e.kind}` === k && e.t >= from);
       if (evs.length >= o.fastCount && once(mem, `fast|${k}`, o.fastMinutes * 60_000, now)) {
@@ -194,12 +196,12 @@ export function detect(
   if (o.notifyHerd && added.length > 0) {
     const from = now - o.herdMinutes * 60_000;
     const lines: string[] = [];
-    const touched = new Set(added.filter((e) => symbols.has(e.symbol) && e.src !== HOME_SOURCE_ID).map((e) => `${e.symbol}|${e.kind}`));
+    const touched = new Set(added.filter((e) => symbols.has(e.symbol) && e.src !== HOME_SOURCE_ID && !muted.has(e.src)).map((e) => `${e.symbol}|${e.kind}`));
     for (const k of touched) {
       const [symbol, kind] = k.split("|") as [string, Kind];
       const net = new Map<string, number>();
       for (const e of mem.events) {
-        if (e.symbol === symbol && e.kind === kind && e.t >= from && e.src !== HOME_SOURCE_ID) {
+        if (e.symbol === symbol && e.kind === kind && e.t >= from && e.src !== HOME_SOURCE_ID && !muted.has(e.src)) {
           net.set(e.src, (net.get(e.src) ?? 0) + (e.to - e.from));
         }
       }

@@ -6,7 +6,7 @@ import { playPing } from "@/lib/notify";
 
 type NumKey = "lossThreshold" | "jumpThreshold" | "fastCount" | "fastMinutes" | "herdMinutes" | "herdMinSources";
 
-export default function NotificationSettings() {
+export default function NotificationSettings({ sources }: { sources: { id: string; name: string }[] }) {
   const [o, setO] = useState<Options>(DEFAULT_OPTIONS);
   const [symbols, setSymbols] = useState(DEFAULT_OPTIONS.notifySymbols.join(", "));
   const [ready, setReady] = useState(false);
@@ -71,6 +71,25 @@ export default function NotificationSettings() {
           autoComplete="off"
           aria-label="Waluty"
         />
+      </section>
+
+      <section className="card">
+        <h2>Kantory</h2>
+        <p className="muted small">Odznacz kantora, żeby wyciszyć powiadomienia o jego zmianach (kursy, skoki, spread, ruchy).</p>
+        <div className="settingsList">
+          {sources.map((s) => (
+            <label key={s.id} className="check">
+              <input
+                type="checkbox"
+                checked={!o.mutedSources.includes(s.id)}
+                onChange={(e) =>
+                  update({ mutedSources: e.target.checked ? o.mutedSources.filter((x) => x !== s.id) : [...o.mutedSources, s.id] })
+                }
+              />
+              <span>{s.name}</span>
+            </label>
+          ))}
+        </div>
       </section>
 
       <section className="card">

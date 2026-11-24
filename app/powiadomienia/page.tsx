@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SOURCES } from "@/lib/sources";
 import { requireUser } from "@/lib/session";
 import NotificationSettings from "./NotificationSettings";
 
@@ -18,7 +19,7 @@ export default async function NotificationsPage() {
         Powiadomienia pokazują się w prawym dolnym rogu po odświeżeniu kursów, gdy strona z kursami jest otwarta.
         Ustawienia zapisują się w tej przeglądarce.
       </p>
-      <NotificationSettings />
+      <NotificationSettings sources={SOURCES.map((s) => ({ id: s.id, name: s.name }))} />
     </main>
   );
 }
