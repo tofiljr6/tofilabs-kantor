@@ -18,6 +18,8 @@ export type Options = {
   notifyEnabled: boolean;
   /** Waluty, których dotyczą powiadomienia. */
   notifySymbols: string[];
+  /** Kantory, których zmian NIE zgłaszamy (id źródeł). */
+  mutedSources: string[];
   notifySound: boolean;
   notifyChanges: boolean; // kantor zmienił kursy
   notifyWorst: boolean; // Dorex najgorszy (czerwony wykrzyknik)
@@ -39,6 +41,7 @@ export const DEFAULT_OPTIONS: Options = {
   showBeat: true,
   notifyEnabled: true,
   notifySymbols: ["EUR", "USD", "CHF", "GBP", "CZK"],
+  mutedSources: ["tavex-olawska"],
   notifySound: true,
   notifyChanges: true,
   notifyWorst: true,
@@ -78,6 +81,10 @@ export function loadOptions(): Options {
           Array.isArray(raw.notifySymbols) && raw.notifySymbols.every((s: unknown) => typeof s === "string")
             ? raw.notifySymbols
             : d.notifySymbols,
+        mutedSources:
+          Array.isArray(raw.mutedSources) && raw.mutedSources.every((s: unknown) => typeof s === "string")
+            ? raw.mutedSources
+            : d.mutedSources,
         notifySound: bool(raw.notifySound, d.notifySound),
         notifyChanges: bool(raw.notifyChanges, d.notifyChanges),
         notifyWorst: bool(raw.notifyWorst, d.notifyWorst),
