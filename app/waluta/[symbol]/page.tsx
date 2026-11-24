@@ -4,6 +4,7 @@ import Flag from "@/components/Flag";
 import HistoryChart from "@/components/HistoryChart";
 import { DAY_END_HOUR, DAY_START_HOUR, getHistory } from "@/lib/history";
 import { fmtDateTime, fmtDiff, fmtPct, fmtRate } from "@/lib/format";
+import { HOME_SOURCE_ID } from "@/lib/home";
 import { requireUser } from "@/lib/session";
 import type { HistoryPoint } from "@/lib/types";
 
@@ -37,6 +38,17 @@ export default async function CurrencyPage({ params }: { params: Promise<{ symbo
   const data = await getHistory(symbol);
   if (!data) notFound();
 
+  // Aktualne kursy każdego kantoru (ostatni punkt historii) + najlepsze dla klienta.
+  const current = data.sources.map((src) => ({
+    src,
+    buy: windowChange(src.points, "buy"),
+    sell: windowChange(src.points, "sell"),
+  }));
+  const buys = current.map((c) => c.buy.last).filter((v): v is number => v != null);
+  const sells = current.map((c) => c.sell.last).filter((v): v is number => v != null);
+  const bestBuy = buys.length > 1 ? Math.max(...buys) : null; // klient dostaje najwięcej
+  const bestSell = sells.length > 1 ? Math.min(...sells) : null; // klient płaci najmniej
+
   return (
     <main>
       <p className="back">
@@ -53,6 +65,31 @@ export default async function CurrencyPage({ params }: { params: Promise<{ symbo
         <p className="muted">Dzisiaj, {DAY_START_HOUR}:00–{DAY_END_HOUR}:00</p>
       </header>
 
+      <h2 className="sectionTitle">Aktualne kursy</h2>
+      <div className="overviewGrid">
+        {current.map(({ src, buy, sell }) => (
+          <section key={src.id} className={`card overviewCard${src.id === HOME_SOURCE_ID ? " home" : ""}`}>
+            <h3>
+              <a href={src.url} target="_blank" rel="noreferrer">{src.name}</a>
+              {src.id === HOME_SOURCE_ID && <span className="homeTag">mój kantor</span>}
+            </h3>
+            <div className="overviewRates">
+              <div className={`overviewRate${bestBuy != null && buy.last === bestBuy ? " best" : ""}`}>
+                <span className="muted small">Kupuje{bestBuy != null && buy.last === bestBuy ? " · najlepszy" : ""}</span>
+                <strong data-copy={buy.last != null ? fmtRate(buy.last) : undefined}>{fmtRate(buy.last)}</strong>
+                <span className="small"><Delta cur={buy.last} prev={buy.first} /></span>
+              </div>
+              <div className={`overviewRate${bestSell != null && sell.last === bestSell ? " best" : ""}`}>
+                <span className="muted small">Sprzedaje{bestSell != null && sell.last === bestSell ? " · najlepszy" : ""}</span>
+                <strong data-copy={sell.last != null ? fmtRate(sell.last) : undefined}>{fmtRate(sell.last)}</strong>
+                <span className="small"><Delta cur={sell.last} prev={sell.first} /></span>
+              </div>
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <h2 className="sectionTitle">Wykresy i zmiany kursu</h2>
       <div className="cardGrid">
       {data.sources.map((src) => {
         const buy = windowChange(src.points, "buy");
