@@ -51,7 +51,11 @@ export default function NotificationSettings() {
   );
 
   return (
-    <div className="settings">
+    <div className={`settings${o.notifyEnabled ? "" : " off"}`}>
+      <section className="card">
+        <div className="settingsRow">{toggle("notifyEnabled", "Powiadomienia włączone", "główny wyłącznik wszystkich powiadomień")}</div>
+      </section>
+
       <section className="card">
         <h2>Waluty</h2>
         <p className="muted small">Powiadomienia dotyczą tylko tych walut (symbole oddzielone przecinkami).</p>

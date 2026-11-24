@@ -459,3 +459,4 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
 .numInput, .symbolsInput { padding: 7px 9px; border: 1px solid var(--border); background: var(--bg); color: inherit; font: inherit; border-radius: 0; }
 .numInput { width: 84px; }
 .symbolsInput { width: 100%; margin-top: 8px; text-transform: uppercase; }
+.settings.off .card:not(:first-child) { opacity: .5; }

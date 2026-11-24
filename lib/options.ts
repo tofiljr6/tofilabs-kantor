@@ -14,6 +14,8 @@ export const WINDOW_OPTIONS: { value: ChangeWindow; label: string }[] = [
 export type Options = {
   changeWindow: ChangeWindow;
   showBeat: boolean;
+  /** Główny wyłącznik wszystkich powiadomień. */
+  notifyEnabled: boolean;
   /** Waluty, których dotyczą powiadomienia. */
   notifySymbols: string[];
   notifySound: boolean;
@@ -35,6 +37,7 @@ export type Options = {
 export const DEFAULT_OPTIONS: Options = {
   changeWindow: "last",
   showBeat: true,
+  notifyEnabled: true,
   notifySymbols: ["EUR", "USD", "CHF", "GBP", "CZK"],
   notifySound: true,
   notifyChanges: true,
@@ -70,6 +73,7 @@ export function loadOptions(): Options {
       return {
         changeWindow: WINDOW_OPTIONS.some((o) => o.value === raw.changeWindow) ? raw.changeWindow : d.changeWindow,
         showBeat: bool(raw.showBeat, d.showBeat),
+        notifyEnabled: bool(raw.notifyEnabled, d.notifyEnabled),
         notifySymbols:
           Array.isArray(raw.notifySymbols) && raw.notifySymbols.every((s: unknown) => typeof s === "string")
             ? raw.notifySymbols

@@ -240,7 +240,7 @@ export default function Dashboard({
         const next: RatesState = await res.json();
         const o = optionsRef.current;
         const added = collectEvents(next, memory.current);
-        const fresh = detect(stateRef.current, next, added, o, memory.current);
+        const fresh = o.notifyEnabled ? detect(stateRef.current, next, added, o, memory.current) : [];
         stateRef.current = next;
         setState(next);
         if (fresh.length > 0) {
