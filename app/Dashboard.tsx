@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Flag from "@/components/Flag";
+import Toasts from "@/components/Toasts";
+import { diffStates, isWorst, playPing, type Toast } from "@/lib/notify";
 import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
 import { fmtDateTime, fmtDiff, fmtRate } from "@/lib/format";
@@ -26,8 +28,20 @@ const WINDOW_OPTIONS: { value: ChangeWindow; label: string }[] = [
   { value: "60", label: "ostatnia 1 godzina" },
   { value: "all", label: "bez limitu" },
 ];
-type Options = { changeWindow: ChangeWindow; showBeat: boolean };
-const DEFAULT_OPTIONS: Options = { changeWindow: "last", showBeat: true };
+type Options = {
+  changeWindow: ChangeWindow;
+  showBeat: boolean;
+  notifyChanges: boolean;
+  notifyWorst: boolean;
+  notifySound: boolean;
+};
+const DEFAULT_OPTIONS: Options = {
+  changeWindow: "last",
+  showBeat: true,
+  notifyChanges: true,
+  notifyWorst: true,
+  notifySound: true,
+};
 const OPTIONS_KEY = "kantor.options.v2";
 
 function loadOptions(): Options {
@@ -37,6 +51,9 @@ function loadOptions(): Options {
       return {
         changeWindow: WINDOW_OPTIONS.some((o) => o.value === raw.changeWindow) ? raw.changeWindow : DEFAULT_OPTIONS.changeWindow,
         showBeat: typeof raw.showBeat === "boolean" ? raw.showBeat : DEFAULT_OPTIONS.showBeat,
+        notifyChanges: typeof raw.notifyChanges === "boolean" ? raw.notifyChanges : DEFAULT_OPTIONS.notifyChanges,
+        notifyWorst: typeof raw.notifyWorst === "boolean" ? raw.notifyWorst : DEFAULT_OPTIONS.notifyWorst,
+        notifySound: typeof raw.notifySound === "boolean" ? raw.notifySound : DEFAULT_OPTIONS.notifySound,
       };
     }
   } catch {
@@ -109,21 +126,6 @@ const beatTitle = (beat: Beat, home: StoredRate | undefined) =>
       ? `Sprzedaje taniej niż Dorex (${fmtRate(home?.sell.value)})`
       : undefined;
 
-/**
- * Czy Dorex ma najgorszy kurs dla klienta: nikt nie jest od nas gorszy, a ktoś jest lepszy
- * (remis wszystkich to nie „najgorszy”; remis na ostatnim miejscu — tak).
- */
-function isWorst(kind: "buy" | "sell", perSource: Record<string, StoredRate>): boolean {
-  const mine = perSource[HOME_SOURCE_ID]?.[kind].value;
-  if (mine == null) return false;
-  const values = Object.values(perSource)
-    .map((r) => r[kind].value)
-    .filter((v): v is number => v != null);
-  const worse = values.some((v) => (kind === "buy" ? v < mine : v > mine));
-  const better = values.some((v) => (kind === "buy" ? v > mine : v < mine));
-  return better && !worse;
-}
-
 /** Migający czerwony wykrzyknik przy symbolu waluty, gdy Dorex jest ostatni w kupnie lub sprzedaży. */
 function WorstDot({ perSource }: { perSource: Record<string, StoredRate> }) {
   const parts = [isWorst("buy", perSource) && "kupnie", isWorst("sell", perSource) && "sprzedaży"].filter(Boolean);
@@ -175,6 +177,10 @@ export default function Dashboard({
   user: CurrentUser;
 }) {
   const [state, setState] = useState(initial);
+  const stateRef = useRef(initial);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastId = useRef(0);
+  const closeToast = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), []);
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState<number | null>(null); // tylko w przeglądarce
   const [preview, setPreview] = useState<Anchor | null>(null);
@@ -258,6 +264,11 @@ export default function Dashboard({
     setPreview(null);
   };
 
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
+
   const busy = useRef(false);
   const lastAuto = useRef(0);
 
@@ -268,7 +279,17 @@ export default function Dashboard({
     try {
       const res = await fetch("/api/rates", { method: force ? "POST" : "GET", cache: "no-store" });
       if (res.status === 401) window.location.href = "/login";
-      else if (res.ok) setState(await res.json());
+      else if (res.ok) {
+        const next: RatesState = await res.json();
+        const o = optionsRef.current;
+        const fresh = diffStates(stateRef.current, next, { changes: o.notifyChanges, worst: o.notifyWorst });
+        stateRef.current = next;
+        setState(next);
+        if (fresh.length > 0) {
+          setToasts((t) => [...t, ...fresh.map((n) => ({ ...n, id: ++toastId.current }))].slice(-6));
+          if (o.notifySound) playPing();
+        }
+      }
     } catch {
       // brak sieci — spróbujemy przy następnym cyklu
     } finally {
@@ -411,6 +432,30 @@ export default function Dashboard({
                   />
                   <span>Ramki porównania z Dorexem (zielona / czerwona)</span>
                 </label>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={options.notifyChanges}
+                    onChange={(e) => updateOptions({ notifyChanges: e.target.checked })}
+                  />
+                  <span>Powiadomienia o zmianie kursów przez kantor</span>
+                </label>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={options.notifyWorst}
+                    onChange={(e) => updateOptions({ notifyWorst: e.target.checked })}
+                  />
+                  <span>Powiadomienia, gdy Dorex jest najgorszy (!)</span>
+                </label>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={options.notifySound}
+                    onChange={(e) => updateOptions({ notifySound: e.target.checked })}
+                  />
+                  <span>Dźwięk powiadomień</span>
+                </label>
                 </div>
                 <Link href="/nbp" className="menuItem" onClick={() => setMenuOpen(false)}>
                   Dorex vs NBP
@@ -550,6 +595,7 @@ export default function Dashboard({
         {visibleRows.length === 0 && <p className="muted empty">{q ? `Brak waluty „${query.trim()}”.` : "Brak danych."}</p>}
       </div>
       {preview && <HoverPreview anchor={preview} />}
+      <Toasts toasts={toasts} onClose={closeToast} />
       <p className="muted small foot">
         ▲ zielony — kurs wzrósł, ▼ czerwony — kurs spadł (o tyle zł względem poprzedniej różnej wartości;
         kolorem: {WINDOW_OPTIONS.find((o) => o.value === options.changeWindow)?.label}).
