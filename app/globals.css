@@ -397,3 +397,19 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
   animation: worstBlink 1s ease-in-out infinite; }
 @keyframes worstBlink { 0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--beat-sell); } 50% { opacity: .2; box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) { .worstDot, .legendDot { animation: none; } }
+
+.symbolSearch { padding: 8px 10px; border: 1px solid var(--border); background: var(--bg); color: inherit;
+  border-radius: 6px; font: inherit; width: 200px; max-width: 100%; }
+.symbolSearch:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+@media (max-width: 700px) { .symbolSearch { flex: 1 1 100%; width: auto; } }
+
+/* --- Strona waluty: duże karty z aktualnymi kursami kantorów --- */
+.sectionTitle { font-size: 16px; margin: 24px 0 12px; color: var(--muted); }
+.overviewGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 12px; }
+.overviewGrid .card { margin-bottom: 0; }
+.overviewCard h3 { margin: 0 0 12px; font-size: 17px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.overviewCard.home { border-left: 5px solid var(--accent); }
+.overviewRates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.overviewRate { display: flex; flex-direction: column; gap: 4px; padding: 10px; border: 1px solid var(--border); }
+.overviewRate strong { font-size: 26px; font-variant-numeric: tabular-nums; }
+.overviewRate.best { border-color: var(--up); background: var(--up-bg); }
