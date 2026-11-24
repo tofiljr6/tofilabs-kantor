@@ -7,6 +7,7 @@ import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
 import { fmtDateTime, fmtDiff, fmtRate } from "@/lib/format";
 import { HOME_SOURCE_ID } from "@/lib/home";
+import { APP_VERSION } from "@/lib/version";
 import type { CurrentUser } from "@/lib/session";
 import { applyTheme, currentTheme, type Theme } from "@/lib/theme";
 import type { RateSide, RatesState, StoredRate } from "@/lib/types";
@@ -455,7 +456,7 @@ export default function Dashboard({
             <tr>
               <th rowSpan={2} className="stick">Waluta</th>
               {sources.map((src) => (
-                <th key={src.id} colSpan={2} className={`group${src.id === HOME_SOURCE_ID ? " home homeL homeR" : ""}`}>
+                <th key={src.id} colSpan={2} className={`group${src.id === HOME_SOURCE_ID ? " home homeL homeR stickHG" : ""}`}>
                   <a href={src.url} target="_blank" rel="noreferrer">{src.name}</a>
                   {src.id === HOME_SOURCE_ID && <span className="homeTag">mój kantor</span>}
                   {statusDot(src)}
@@ -464,8 +465,8 @@ export default function Dashboard({
             </tr>
             <tr>
               {sources.map((src) => [
-                <th key={`${src.id}-b`} className={`num groupStart${src.id === HOME_SOURCE_ID ? " homeL" : ""}`}>Kupuje</th>,
-                <th key={`${src.id}-s`} className={`num pairSell${src.id === HOME_SOURCE_ID ? " homeR" : ""}`}>Sprzedaje</th>,
+                <th key={`${src.id}-b`} className={`num groupStart${src.id === HOME_SOURCE_ID ? " homeL stickHB" : ""}`}>Kupuje</th>,
+                <th key={`${src.id}-s`} className={`num pairSell${src.id === HOME_SOURCE_ID ? " homeR stickHS" : ""}`}>Sprzedaje</th>,
               ])}
             </tr>
           </thead>
@@ -491,8 +492,8 @@ export default function Dashboard({
                   const bb = beatFor(src.id, "buy", r, home);
                   const bs = beatFor(src.id, "sell", r, home);
                   return [
-                    <RateCell key={`${src.id}-b`} side={r?.buy} fresh={freshFor(r?.buy, src.scrapedAt)} beat={bb} beatInfo={beatTitle(bb, home)} extra={src.id === HOME_SOURCE_ID ? "homeL" : undefined} />,
-                    <RateCell key={`${src.id}-s`} side={r?.sell} fresh={freshFor(r?.sell, src.scrapedAt)} beat={bs} beatInfo={beatTitle(bs, home)} extra={src.id === HOME_SOURCE_ID ? "pairSell homeR" : "pairSell"} />,
+                    <RateCell key={`${src.id}-b`} side={r?.buy} fresh={freshFor(r?.buy, src.scrapedAt)} beat={bb} beatInfo={beatTitle(bb, home)} extra={src.id === HOME_SOURCE_ID ? "homeL stickHB" : undefined} />,
+                    <RateCell key={`${src.id}-s`} side={r?.sell} fresh={freshFor(r?.sell, src.scrapedAt)} beat={bs} beatInfo={beatTitle(bs, home)} extra={src.id === HOME_SOURCE_ID ? "pairSell homeR stickHS" : "pairSell"} />,
                   ];
                 })}
               </tr>
@@ -555,6 +556,7 @@ export default function Dashboard({
         {" "}Kliknij w kurs, aby skopiować go do schowka.
         {" "}Najedź na walutę, aby zobaczyć wykres z 24 h (kliknij, by otworzyć szczegóły).
       </p>
+      <p className="muted small version">v{APP_VERSION}</p>
     </main>
   );
 }

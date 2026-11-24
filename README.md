@@ -4,6 +4,11 @@ Next.js (App Router) + PostgreSQL. Scrapuje kursy z kantorów co 2 minuty (lub n
 i pokazuje je w jednej tabeli: wiersze = waluty, kolumny = kantory. Po najechaniu na walutę
 widać wykres z 24 h, a po kliknięciu podstronę `/waluta/[SYMBOL]` (24 h / 7 dni / 30 dni).
 
+## Wersjonowanie
+
+Wersja ma postać `1.0.X`, gdzie `X` to numer pull requesta. Każdy PR podbija `version` w `package.json`
+(np. PR #15 → `1.0.15`); numer wyświetla się pod tabelą na dashboardzie.
+
 ## Uruchomienie lokalnie
 
 Wymaga lokalnego PostgreSQL (np. `brew install postgresql@18 && brew services start postgresql@18`).

@@ -76,6 +76,19 @@ table.rates col.colRate { width: 74px; }
 th.group { overflow-wrap: anywhere; }
 .stick { position: sticky; left: 0; background: var(--surface); z-index: 1; padding: 5px 8px; }
 thead th.stick { background: var(--head); z-index: 2; }
+/* Kolumny Dorexa przyklejone obok kolumny waluty (szerokości z <colgroup>: 96 px + 74 px) */
+table.rates .stickHB, table.rates .stickHS, table.rates .stickHG { position: sticky; z-index: 1; background-color: var(--surface); }
+table.rates .stickHG, table.rates .stickHB { left: 96px; }
+table.rates .stickHS { left: 170px; }
+table.rates thead .stickHG, table.rates thead .stickHB, table.rates thead .stickHS { z-index: 2; background-color: var(--head); }
+table.rates .stickHG { background-image: linear-gradient(var(--home-bg), var(--home-bg)); }
+table.rates td.stickHB.up, table.rates td.stickHS.up { background-image: linear-gradient(var(--up-bg), var(--up-bg)); }
+table.rates td.stickHB.down, table.rates td.stickHS.down { background-image: linear-gradient(var(--down-bg), var(--down-bg)); }
+/* border-collapse nie przesuwa ramek razem z komórką — akcent rysujemy cieniem */
+table.rates .stickHG { border-left-width: 0; border-right-width: 0; box-shadow: inset 5px 0 0 var(--accent), inset -5px 0 0 var(--accent); }
+table.rates .stickHB { border-left-width: 0; box-shadow: inset 5px 0 0 var(--accent); }
+table.rates .stickHS { border-right-width: 0; box-shadow: inset -5px 0 0 var(--accent); }
+.version { text-align: right; margin: 4px 0 0; }
 .sym { font-weight: 700; font-size: 14px; }
 .empty { text-align: center; padding: 24px; }
 a { color: var(--accent); text-decoration: none; }
