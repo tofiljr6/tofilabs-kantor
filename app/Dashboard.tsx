@@ -278,7 +278,7 @@ export default function Dashboard({
     }
   }, []);
 
-  // Co 30 s pytamy serwer o stan (tani odczyt z bazy; serwer sam scrapuje, gdy dane mają > 5 min,
+  // Co 30 s pytamy serwer o stan (tani odczyt z bazy; serwer sam scrapuje, gdy dane mają > 2 min,
   // a nowe kursy zebrane przez harmonogram /api/cron pojawią się bez przeładowania).
   // Po powrocie na kartę — od razu, bo przeglądarki usypiają timery w tle.
   useEffect(() => {

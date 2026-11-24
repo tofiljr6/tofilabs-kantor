@@ -1,6 +1,6 @@
 # Kursy walut — dashboard
 
-Next.js (App Router) + PostgreSQL. Scrapuje kursy z kantorów co 5 minut (lub na żądanie)
+Next.js (App Router) + PostgreSQL. Scrapuje kursy z kantorów co 2 minuty (lub na żądanie)
 i pokazuje je w jednej tabeli: wiersze = waluty, kolumny = kantory. Po najechaniu na walutę
 widać wykres z 24 h, a po kliknięciu podstronę `/waluta/[SYMBOL]` (24 h / 7 dni / 30 dni).
 
@@ -61,15 +61,15 @@ konto w bazie — `lib/session.ts`). Bez zmiennych `AUTH_*` nikt się nie zalogu
 4. **Deploy.** Build sam tworzy tabele w bazie (`npm run build` = migracja + `next build`;
    schemat jest idempotentny). Funkcje działają we Frankfurcie (`vercel.json` → `fra1`), obok bazy.
 
-### Scraping co 5 minut
+### Scraping co 2 minuty
 
-Dashboard sam pobiera kursy, gdy ktoś go ogląda, a dane mają > 5 min. Żeby historia zbierała się
-też bez oglądających, `/api/cron` musi być wołany co 5 minut (nagłówek
-`Authorization: Bearer $CRON_SECRET`). Endpoint pomija scraping, jeśli ostatni był < 4 min temu,
+Dashboard sam pobiera kursy, gdy ktoś go ogląda, a dane mają > 2 min. Żeby historia zbierała się
+też bez oglądających, `/api/cron` musi być wołany co 2 minuty (nagłówek
+`Authorization: Bearer $CRON_SECRET`). Endpoint pomija scraping, jeśli ostatni był < 90 s temu,
 więc kilka harmonogramów naraz nie dubluje zapytań do kantorów (`?force=1` wymusza).
 
 - **cron-job.org (zalecane, darmowe, punktualne)** — nowy cronjob: URL `https://<app>/api/cron`,
-  co 5 minut, w *Advanced → Headers* dodaj `Authorization: Bearer <CRON_SECRET>`.
+  co 2 minuty, w *Advanced → Headers* dodaj `Authorization: Bearer <CRON_SECRET>`.
 - **GitHub Actions** (`.github/workflows/scrape.yml`, zapas) — sekrety repo `APP_URL` i `CRON_SECRET`.
   Harmonogram GitHuba jest „best effort”: w praktyce odpala co 10–30 min, a część uruchomień przepada.
 - **Vercel Cron** — na planie Hobby tylko raz dziennie; na Pro można dodać do `vercel.json`:

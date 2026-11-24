@@ -7,9 +7,9 @@ export const maxDuration = 60;
 
 // Jeśli ktoś (inny harmonogram albo użytkownik) scrapował przed chwilą — pomijamy,
 // żeby kilka harmonogramów naraz (np. cron-job.org + GitHub Actions) nie odpytywało kantorów podwójnie.
-const MIN_GAP_MS = 4 * 60 * 1000;
+const MIN_GAP_MS = 90 * 1000; // < interwał crona (2 min), inaczej co drugie wywołanie byłoby pomijane
 
-// Wywoływane co 5 minut przez zewnętrzny harmonogram (cron-job.org / GitHub Actions / Vercel Cron).
+// Wywoływane co 2 minuty przez zewnętrzny harmonogram (cron-job.org / GitHub Actions / Vercel Cron).
 // Wymaga nagłówka "Authorization: Bearer $CRON_SECRET" (Vercel Cron dokleja go sam).
 // ?force=1 — scrapuj niezależnie od tego, kiedy był ostatni raz.
 export async function GET(req: NextRequest) {

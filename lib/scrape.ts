@@ -4,7 +4,7 @@ import { lastRunAt, lastSymbols, loadState, logRun, saveRates, upsertSources } f
 import { SOURCES, type Source } from "./sources";
 import type { RatesState, ScrapedRate } from "./types";
 
-export const SCRAPE_INTERVAL_MS = 5 * 60 * 1000;
+export const SCRAPE_INTERVAL_MS = 2 * 60 * 1000;
 // Stały klucz blokady — chroni przed równoległym scrapingiem z kilku instancji (Vercel).
 const LOCK_KEY = 482_917_001;
 
@@ -87,7 +87,7 @@ export function scrapeAll(): Promise<RatesState> {
   return inFlight;
 }
 
-/** Zwraca stan z bazy; jeśli ostatni scraping był ponad 5 min temu, najpierw scrapuje. */
+/** Zwraca stan z bazy; jeśli ostatni scraping był ponad 2 min temu, najpierw scrapuje. */
 export async function getRates(): Promise<RatesState> {
   const last = await lastRunAt();
   const age = last ? Date.now() - last.getTime() : Infinity;
