@@ -181,6 +181,7 @@ export default function Dashboard({
   const [optionsOpen, setOptionsOpen] = useState(false);
   const optionsRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   // Numer kolumny (1-based, jak w :nth-child) pod kursorem — podświetlamy całą kolumnę.
   const [hoverCol, setHoverCol] = useState<number | null>(null);
@@ -318,6 +319,10 @@ export default function Dashboard({
     return [...bySymbol.values()];
   }, [sources]);
 
+  // Wyszukiwanie po symbolu (np. "eur", "usd") — dopasowanie fragmentu, bez rozróżniania wielkości liter.
+  const q = query.trim().toUpperCase();
+  const visibleRows = useMemo(() => (q ? rows.filter((r) => r.symbol.includes(q)) : rows), [rows, q]);
+
   const errors = sources.filter((s) => s.error);
   // Kantor aktualny = bez błędu i dane nie starsze niż 2 cykle scrapingu.
   const statusOf = (src: (typeof sources)[number]) => {
@@ -342,6 +347,16 @@ export default function Dashboard({
           </p>
         </div>
         <div className="controls">
+          <input
+            type="search"
+            className="symbolSearch"
+            placeholder="Szukaj waluty (np. EUR)"
+            aria-label="Szukaj waluty po symbolu"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+          />
           <div className="optionsWrap" ref={optionsRef}>
             <button className="secondary" onClick={() => setOptionsOpen((o) => !o)} aria-expanded={optionsOpen}>
               Opcje
@@ -455,7 +470,7 @@ export default function Dashboard({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {visibleRows.map((row) => (
               <tr key={row.symbol}>
                 <td className="stick" title={row.name}>
                   <Link
@@ -482,9 +497,9 @@ export default function Dashboard({
                 })}
               </tr>
             ))}
-            {rows.length === 0 && (
+            {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={1 + sources.length * 2} className="muted empty">Brak danych.</td>
+                <td colSpan={1 + sources.length * 2} className="muted empty">{q ? `Brak waluty „${query.trim()}”.` : "Brak danych."}</td>
               </tr>
             )}
           </tbody>
@@ -493,7 +508,7 @@ export default function Dashboard({
 
       {/* Telefon: każda waluta jako osobna karta, kantory w dwóch kolumnach */}
       <div className="cards">
-        {rows.map((row) => (
+        {visibleRows.map((row) => (
           <section key={row.symbol} className="currencyCard">
             <Link href={`/waluta/${encodeURIComponent(row.symbol)}`} className="currency cardTitle" title={row.name}>
               <Flag symbol={row.symbol} />
@@ -524,7 +539,7 @@ export default function Dashboard({
             </div>
           </section>
         ))}
-        {rows.length === 0 && <p className="muted empty">Brak danych.</p>}
+        {visibleRows.length === 0 && <p className="muted empty">{q ? `Brak waluty „${query.trim()}”.` : "Brak danych."}</p>}
       </div>
       {preview && <HoverPreview anchor={preview} />}
       <p className="muted small foot">

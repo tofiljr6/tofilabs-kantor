@@ -397,3 +397,8 @@ main.wide { max-width: none; padding-left: 16px; padding-right: 16px; }
   animation: worstBlink 1s ease-in-out infinite; }
 @keyframes worstBlink { 0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--beat-sell); } 50% { opacity: .2; box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) { .worstDot, .legendDot { animation: none; } }
+
+.symbolSearch { padding: 8px 10px; border: 1px solid var(--border); background: var(--bg); color: inherit;
+  border-radius: 6px; font: inherit; width: 200px; max-width: 100%; }
+.symbolSearch:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+@media (max-width: 700px) { .symbolSearch { flex: 1 1 100%; width: auto; } }
