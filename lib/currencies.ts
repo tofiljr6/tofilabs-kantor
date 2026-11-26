@@ -119,6 +119,19 @@ const CURRENCIES: Record<string, Info> = {
   PLN: ["pl", "Złoty polski"],
 };
 
+/**
+ * Kolejność walut dokładnie jak na dorex.com.pl/kursy-walut (kanoniczne symbole).
+ * Waluty spoza listy trafiają na koniec, alfabetycznie.
+ */
+export const DOREX_ORDER: string[] = [
+  "EUR", "USD", "GBP", "CHF", "SEK", "CZK", "HUF", "AUD", "DKK", "JPY",
+  "CAD", "NOK", "MYR", "NZD", "RON", "RSD", "SGD", "THB", "TND", "TRY",
+  "UAH", "ZAR", "MXN", "MKD", "MAD", "DOP", "BRL", "CNY", "BAM", "ALL",
+  "AED", "BGN", "RUB", "EGP", "GEL", "HKD", "KRW", "JOD", "ISK", "INR",
+  "ILS", "IDR", "QAR", "EUB", "GBB", "CHB", "CZB", "US1", "KZT", "KES",
+  "CLP", "PEN", "PHP", "SAR", "VND", "JMD",
+];
+
 /** Czy symbol jest w słowniku (odsiewa wycofane waluty typu DEM, ATS, stare banknoty itp.). */
 export function isKnownCurrency(symbol: string): boolean {
   return canonicalSymbol(symbol) in CURRENCIES;

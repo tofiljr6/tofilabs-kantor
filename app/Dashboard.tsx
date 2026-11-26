@@ -9,6 +9,7 @@ import { DEFAULT_OPTIONS, loadOptions, saveOptions, WINDOW_OPTIONS, type ChangeW
 import HoverPreview, { type Anchor } from "@/components/HoverPreview";
 import { logout } from "./login/actions";
 import { fmtDateTime, fmtDiff, fmtRate } from "@/lib/format";
+import { DOREX_ORDER } from "@/lib/currencies";
 import { HOME_SOURCE_ID } from "@/lib/home";
 import { APP_VERSION } from "@/lib/version";
 import type { CurrentUser } from "@/lib/session";
@@ -296,15 +297,10 @@ export default function Dashboard({
         bySymbol.set(r.symbol, row);
       }
     }
-    // Stała kolejność: EUR, USD, GBP, CHF → reszta jak na stronie Dorexa → waluty, których Dorex nie ma, alfabetycznie.
-    const dorexOrder = new Map(
-      (state.sources[HOME_SOURCE_ID]?.rates ?? []).map((r, i) => [r.symbol, i] as const),
-    );
+    // Stała kolejność dokładnie jak na stronie Dorexa (DOREX_ORDER); waluty spoza listy — alfabetycznie na końcu.
     const rank = (s: string) => {
-      const p = PINNED.indexOf(s);
-      if (p !== -1) return p;
-      const d = dorexOrder.get(s);
-      return d == null ? Infinity : PINNED.length + d;
+      const i = DOREX_ORDER.indexOf(s);
+      return i === -1 ? Infinity : i;
     };
     return [...bySymbol.values()].sort((a, b) => {
       const ra = rank(a.symbol);
