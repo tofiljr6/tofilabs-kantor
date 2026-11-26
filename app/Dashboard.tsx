@@ -296,15 +296,23 @@ export default function Dashboard({
         bySymbol.set(r.symbol, row);
       }
     }
-    // Stała kolejność: najpierw EUR, USD, GBP, CHF, potem reszta alfabetycznie (niezależnie od kolejności kantorów).
-    const rank = (s: string) => {
-      const i = PINNED.indexOf(s);
-      return i === -1 ? PINNED.length : i;
-    };
-    return [...bySymbol.values()].sort(
-      (a, b) => rank(a.symbol) - rank(b.symbol) || (a.symbol < b.symbol ? -1 : a.symbol > b.symbol ? 1 : 0),
+    // Stała kolejność: EUR, USD, GBP, CHF → reszta jak na stronie Dorexa → waluty, których Dorex nie ma, alfabetycznie.
+    const dorexOrder = new Map(
+      (state.sources[HOME_SOURCE_ID]?.rates ?? []).map((r, i) => [r.symbol, i] as const),
     );
-  }, [sources]);
+    const rank = (s: string) => {
+      const p = PINNED.indexOf(s);
+      if (p !== -1) return p;
+      const d = dorexOrder.get(s);
+      return d == null ? Infinity : PINNED.length + d;
+    };
+    return [...bySymbol.values()].sort((a, b) => {
+      const ra = rank(a.symbol);
+      const rb = rank(b.symbol);
+      if (ra !== rb) return ra < rb ? -1 : 1;
+      return a.symbol < b.symbol ? -1 : a.symbol > b.symbol ? 1 : 0;
+    });
+  }, [sources, state.sources]);
 
   // Wyszukiwanie po symbolu (np. "eur", "usd") — dopasowanie fragmentu, bez rozróżniania wielkości liter.
   const q = query.trim().toUpperCase();
