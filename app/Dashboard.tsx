@@ -17,6 +17,9 @@ import type { RateSide, RatesState, StoredRate } from "@/lib/types";
 
 const fmtTime = (iso: string | null) => fmtDateTime(iso, true);
 const POLL_MS = 30_000;
+/** Waluty zawsze na początku tabeli, w tej kolejności; pod ostatnią z nich jest grubsza linia. */
+const PINNED = ["EUR", "USD", "GBP", "CHF"];
+const LAST_PINNED = PINNED[PINNED.length - 1];
 
 
 /** Czy zmiana z `changedAt` mieści się w wybranym oknie czasu. */
@@ -293,7 +296,14 @@ export default function Dashboard({
         bySymbol.set(r.symbol, row);
       }
     }
-    return [...bySymbol.values()];
+    // Stała kolejność: najpierw EUR, USD, GBP, CHF, potem reszta alfabetycznie (niezależnie od kolejności kantorów).
+    const rank = (s: string) => {
+      const i = PINNED.indexOf(s);
+      return i === -1 ? PINNED.length : i;
+    };
+    return [...bySymbol.values()].sort(
+      (a, b) => rank(a.symbol) - rank(b.symbol) || (a.symbol < b.symbol ? -1 : a.symbol > b.symbol ? 1 : 0),
+    );
   }, [sources]);
 
   // Wyszukiwanie po symbolu (np. "eur", "usd") — dopasowanie fragmentu, bez rozróżniania wielkości liter.
@@ -461,7 +471,7 @@ export default function Dashboard({
           </thead>
           <tbody>
             {visibleRows.map((row) => (
-              <tr key={row.symbol}>
+              <tr key={row.symbol} className={row.symbol === LAST_PINNED && !q ? "pinnedEnd" : undefined}>
                 <td className="stick" title={row.name}>
                   <Link
                     href={`/waluta/${encodeURIComponent(row.symbol)}`}
